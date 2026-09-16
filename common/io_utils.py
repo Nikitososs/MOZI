@@ -15,6 +15,17 @@ def read_text_file(filepath: str) -> str:
         return f.read()
 
 
+def load_text_from_file_or_record(filepath: str, preferred_prefix: str = "") -> str:
+    content = read_text_file(filepath).strip()
+    if preferred_prefix:
+        for line in content.splitlines():
+            if ":" in line:
+                key, _, val = line.partition(":")
+                if preferred_prefix.upper() in key.upper():
+                    return val.strip()
+    return content
+
+
 def format_encryption_record(
     text: str,
     result_text: str,

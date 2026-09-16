@@ -20,7 +20,12 @@ if sys.stdin.encoding and sys.stdin.encoding.lower() != "utf-8":
         pass
 
 import caesar_cipher as cc
-from common.io_utils import save_text_file, format_encryption_record, format_bruteforce_records
+from common.io_utils import (
+    save_text_file,
+    format_encryption_record,
+    format_bruteforce_records,
+    load_text_from_file_or_record
+)
 from variants import VARIANTS_DB
 
 OUTPUTS_DIR = os.path.join(CURRENT_DIR, "outputs")
@@ -46,6 +51,38 @@ def print_banner() -> None:
     print("=" * 70)
 
 
+def prompt_text_source(prompt_label: str, record_hint: str = "") -> str:
+    print(f"\nСпособ ввода ({prompt_label}):")
+    print("1 - Ввести вручную с клавиатуры")
+    print("2 - Прочитать из файла")
+    src_choice = input("Выбор (1/2, по умолчанию 1): ").strip()
+    if src_choice == "2":
+        filepath = input("Путь к файлу: ").strip()
+        if not filepath:
+            print(">> Ошибка: путь не может быть пустым.")
+            return ""
+        if not os.path.isfile(filepath):
+            print(f">> Ошибка: файл '{filepath}' не найден.")
+            return ""
+        try:
+            content = load_text_from_file_or_record(filepath, record_hint)
+            if not content:
+                print(">> Ошибка: файл пуст.")
+                return ""
+            preview = content if len(content) <= 60 else content[:57] + "..."
+            print(f">> Успешно прочитано ({len(content)} симв.): {preview}")
+            return content
+        except Exception as e:
+            print(f">> Ошибка при чтении файла: {e}")
+            return ""
+    else:
+        text = input(f"Введите {prompt_label}: ").strip()
+        if not text:
+            print(">> Ошибка: введен пустой текст.")
+            return ""
+        return text
+
+
 def prompt_key(alpha: cc.Alphabet, prompt_text: str = "") -> int:
     max_k = alpha.power - 1
     if not prompt_text:
@@ -66,12 +103,11 @@ def prompt_key(alpha: cc.Alphabet, prompt_text: str = "") -> int:
 
 def handle_encrypt() -> None:
     print("\n--- 1. ШИФРОВАНИЕ ТЕКСТА ---")
-    raw_text = input("Введите исходный текст: ").strip()
+    raw_text = prompt_text_source("исходный текст", record_hint="ОТКРЫТЫЙ ТЕКСТ")
     if not raw_text:
-        print(">> Текст пуст.")
         return
 
-    print("Форматирование:")
+    print("\nФорматирование:")
     print("1 - Сохранять пробелы и знаки препинания")
     print("2 - Только символы алфавита (канонический вид)")
     fmt_choice = input("Выбор (1/2, по умолчанию 1): ").strip()
@@ -95,9 +131,8 @@ def handle_encrypt() -> None:
 
 def handle_decrypt() -> None:
     print("\n--- 2. РАСШИФРОВАНИЕ ТЕКСТА ---")
-    ciphertext = input("Введите шифр-текст: ").strip()
+    ciphertext = prompt_text_source("шифр-текст", record_hint="ЗАШИФРОВАННЫЙ ТЕКСТ")
     if not ciphertext:
-        print(">> Текст пуст.")
         return
 
     key = prompt_key(current_alphabet)
@@ -118,9 +153,8 @@ def handle_decrypt() -> None:
 
 def handle_bruteforce() -> None:
     print("\n--- 3. ПОЛНЫЙ ПЕРЕБОР КЛЮЧЕЙ (ВЗЛОМ) ---")
-    ciphertext = input("Введите шифр-текст: ").strip()
+    ciphertext = prompt_text_source("шифр-текст", record_hint="ЗАШИФРОВАННЫЙ ТЕКСТ")
     if not ciphertext:
-        print(">> Текст пуст.")
         return
 
     variants = cc.brute_force(ciphertext, alphabet=current_alphabet)
@@ -160,9 +194,8 @@ def handle_variant_task() -> None:
             except ValueError:
                 print(">> Введите целое число.")
     elif choice == "3":
-        custom_ct = input("Введите шифр-текст: ").strip()
+        custom_ct = prompt_text_source("шифр-текст", record_hint="ЗАШИФРОВАННЫЙ ТЕКСТ")
         if not custom_ct:
-            print(">> Текст пуст.")
             return
 
     # Задания вариантов методички используют русский алфавит m=32

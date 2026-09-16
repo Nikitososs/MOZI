@@ -1,5 +1,10 @@
 import pytest
-from common.io_utils import save_text_file, format_encryption_record, format_bruteforce_records
+from common.io_utils import (
+    save_text_file,
+    format_encryption_record,
+    format_bruteforce_records,
+    load_text_from_file_or_record
+)
 from lab_1.caesar_cipher import (
     Alphabet,
     EN_ALPHABET,
@@ -99,6 +104,19 @@ def test_file_output_helpers(tmp_path):
     assert "ШИФРОВАНИЕ" in content
     assert "КЛЮЧ: 1" in content
     assert "ужуу" in content
+
+    # Проверка чтения шифр-текста из созданной записи
+    loaded_st = load_text_from_file_or_record(str(test_file), preferred_prefix="ЗАШИФРОВАННЫЙ ТЕКСТ")
+    assert loaded_st == "ужуу"
+
+    # Проверка чтения открытого текста из записи
+    loaded_ot = load_text_from_file_or_record(str(test_file), preferred_prefix="ОТКРЫТЫЙ ТЕКСТ")
+    assert loaded_ot == "тест"
+
+    # Проверка чтения обычного сырого файла
+    raw_file = tmp_path / "raw.txt"
+    raw_file.write_text("простой секретный текст\n", encoding="utf-8")
+    assert load_text_from_file_or_record(str(raw_file)) == "простой секретный текст"
 
 
 def test_english_alphabet_preset():
