@@ -3,7 +3,8 @@ from common.io_utils import (
     save_text_file,
     format_encryption_record,
     format_bruteforce_records,
-    load_text_from_file_or_record
+    load_text_from_file_or_record,
+    extract_key_from_text
 )
 from lab_1.caesar_cipher import (
     Alphabet,
@@ -104,13 +105,21 @@ def test_file_output_helpers(tmp_path):
     assert "ШИФРОВАНИЕ" in content
     assert "КЛЮЧ: 1" in content
     assert "ужуу" in content
+    # В шифрованном файле не должно быть открытого текста (только ключ и шифровка)
+    assert "тест" not in content
 
     # Проверка чтения шифр-текста из созданной записи
     loaded_st = load_text_from_file_or_record(str(test_file), preferred_prefix="ЗАШИФРОВАННЫЙ ТЕКСТ")
     assert loaded_st == "ужуу"
 
-    # Проверка чтения открытого текста из записи
-    loaded_ot = load_text_from_file_or_record(str(test_file), preferred_prefix="ОТКРЫТЫЙ ТЕКСТ")
+    # Проверка автоматического извлечения ключа из файла
+    assert extract_key_from_text(content) == 1
+
+    # Проверка чтения открытого текста из записи расшифрования
+    dec_file = tmp_path / "test_dec.txt"
+    dec_record = format_encryption_record("ужуу", "тест", 1, is_decryption=True)
+    save_text_file(str(dec_file), dec_record)
+    loaded_ot = load_text_from_file_or_record(str(dec_file), preferred_prefix="РАСШИФРОВАННЫЙ ТЕКСТ")
     assert loaded_ot == "тест"
 
     # Проверка чтения обычного сырого файла

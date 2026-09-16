@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Optional, Tuple
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
@@ -22,9 +23,11 @@ if sys.stdin.encoding and sys.stdin.encoding.lower() != "utf-8":
 import caesar_cipher as cc
 from common.io_utils import (
     save_text_file,
+    read_text_file,
     format_encryption_record,
     format_bruteforce_records,
-    load_text_from_file_or_record
+    load_text_from_file_or_record,
+    extract_key_from_text
 )
 from variants import VARIANTS_DB
 
@@ -51,7 +54,7 @@ def print_banner() -> None:
     print("=" * 70)
 
 
-def prompt_text_source(prompt_label: str, record_hint: str = "") -> str:
+def prompt_text_source_with_key(prompt_label: str, record_hint: str = "") -> Tuple[str, Optional[int]]:
     print(f"\nСпособ ввода ({prompt_label}):")
     print("1 - Ввести вручную с клавиатуры")
     print("2 - Прочитать из файла")
@@ -60,37 +63,50 @@ def prompt_text_source(prompt_label: str, record_hint: str = "") -> str:
         filepath = input("Путь к файлу: ").strip()
         if not filepath:
             print(">> Ошибка: путь не может быть пустым.")
-            return ""
+            return "", None
         if not os.path.isfile(filepath):
             print(f">> Ошибка: файл '{filepath}' не найден.")
-            return ""
+            return "", None
         try:
+            raw_content = read_text_file(filepath)
             content = load_text_from_file_or_record(filepath, record_hint)
+            key = extract_key_from_text(raw_content)
             if not content:
                 print(">> Ошибка: файл пуст.")
-                return ""
+                return "", None
             preview = content if len(content) <= 60 else content[:57] + "..."
-            print(f">> Успешно прочитано ({len(content)} симв.): {preview}")
-            return content
+            key_info = f", обнаружен ключ k={key}" if key is not None else ""
+            print(f">> Успешно прочитано ({len(content)} симв.{key_info}): {preview}")
+            return content, key
         except Exception as e:
             print(f">> Ошибка при чтении файла: {e}")
-            return ""
+            return "", None
     else:
         text = input(f"Введите {prompt_label}: ").strip()
         if not text:
             print(">> Ошибка: введен пустой текст.")
-            return ""
-        return text
+            return "", None
+        return text, None
 
 
-def prompt_key(alpha: cc.Alphabet, prompt_text: str = "") -> int:
+def prompt_text_source(prompt_label: str, record_hint: str = "") -> str:
+    text, _ = prompt_text_source_with_key(prompt_label, record_hint)
+    return text
+
+
+def prompt_key(alpha: cc.Alphabet, prompt_text: str = "", default_key: Optional[int] = None) -> int:
     max_k = alpha.power - 1
     if not prompt_text:
-        prompt_text = f"Введите ключ k (1..{max_k}): "
+        if default_key is not None:
+            prompt_text = f"Введите ключ k (1..{max_k}, Enter для {default_key}): "
+        else:
+            prompt_text = f"Введите ключ k (1..{max_k}): "
     while True:
         try:
             val = input(prompt_text).strip()
             if not val:
+                if default_key is not None:
+                    return default_key
                 print(">> Ошибка: ключ не может быть пустым.")
                 continue
             k = int(val)
@@ -131,11 +147,15 @@ def handle_encrypt() -> None:
 
 def handle_decrypt() -> None:
     print("\n--- 2. РАСШИФРОВАНИЕ ТЕКСТА ---")
-    ciphertext = prompt_text_source("шифр-текст", record_hint="ЗАШИФРОВАННЫЙ ТЕКСТ")
+    ciphertext, file_key = prompt_text_source_with_key("шифр-текст", record_hint="ШИФР-ТЕКСТ")
     if not ciphertext:
         return
 
-    key = prompt_key(current_alphabet)
+    if file_key is not None and 1 <= file_key <= (current_alphabet.power - 1):
+        key = prompt_key(current_alphabet, default_key=file_key)
+    else:
+        key = prompt_key(current_alphabet)
+
     plaintext = cc.decrypt(ciphertext, key, alphabet=current_alphabet)
 
     print(f"\nАлфавит:              {current_alphabet.name}")

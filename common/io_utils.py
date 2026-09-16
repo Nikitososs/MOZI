@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 import os
 
 
@@ -15,14 +15,47 @@ def read_text_file(filepath: str) -> str:
         return f.read()
 
 
+def extract_key_from_text(content: str) -> Optional[int]:
+    for line in content.splitlines():
+        if ":" in line:
+            key, _, val = line.partition(":")
+            if "КЛЮЧ" in key.upper():
+                try:
+                    return int(val.strip())
+                except ValueError:
+                    pass
+    return None
+
+
 def load_text_from_file_or_record(filepath: str, preferred_prefix: str = "") -> str:
     content = read_text_file(filepath).strip()
     if preferred_prefix:
+        pref = preferred_prefix.upper()
+        # 1. Прямой поиск префикса
         for line in content.splitlines():
             if ":" in line:
                 key, _, val = line.partition(":")
-                if preferred_prefix.upper() in key.upper():
+                if pref in key.upper():
                     return val.strip()
+
+        # 2. Нестрогий поиск открытого/расшифрованного текста
+        if any(w in pref for w in ["ОТКРЫТ", "РАСШИФР"]):
+            for line in content.splitlines():
+                if ":" in line:
+                    key, _, val = line.partition(":")
+                    ku = key.upper()
+                    if "ОТКРЫТ" in ku or "РАСШИФР" in ku:
+                        return val.strip()
+
+        # 3. Нестрогий поиск шифр-текста / зашифрованного текста
+        if "ЗАШИФР" in pref or ("ШИФР" in pref and "РАСШИФР" not in pref):
+            for line in content.splitlines():
+                if ":" in line:
+                    key, _, val = line.partition(":")
+                    ku = key.upper()
+                    if "РАСШИФР" not in ku and ("ШИФР" in ku or "ЗАШИФР" in ku):
+                        return val.strip()
+
     return content
 
 
@@ -33,14 +66,18 @@ def format_encryption_record(
     cipher_name: str = "ШИФР ЦЕЗАРЯ",
     is_decryption: bool = False
 ) -> str:
-    op_name = "РАСШИФРОВАНИЕ" if is_decryption else "ШИФРОВАНИЕ"
-    input_label = "ШИФР-ТЕКСТ (ШТ)" if is_decryption else "ОТКРЫТЫЙ ТЕКСТ (ОТ)"
-    output_label = "РАСШИФРОВАННЫЙ ТЕКСТ (ОТ)" if is_decryption else "ЗАШИФРОВАННЫЙ ТЕКСТ (ШТ)"
+    if not is_decryption:
+        # В шифрованном файле хранятся только ключ и результат шифрования (шифровка)
+        return (
+            f"=== ШИФРОВАНИЕ ({cipher_name}) ===\n"
+            f"КЛЮЧ: {key}\n"
+            f"ШИФР-ТЕКСТ (ШТ): {result_text}\n"
+        )
     return (
-        f"=== {op_name} ({cipher_name}) ===\n"
+        f"=== РАСШИФРОВАНИЕ ({cipher_name}) ===\n"
         f"КЛЮЧ: {key}\n"
-        f"{input_label}: {text}\n"
-        f"{output_label}: {result_text}\n"
+        f"ШИФР-ТЕКСТ (ШТ): {text}\n"
+        f"РАСШИФРОВАННЫЙ ТЕКСТ (ОТ): {result_text}\n"
     )
 
 
