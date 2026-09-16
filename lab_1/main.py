@@ -308,11 +308,13 @@ def handle_variant_task() -> None:
     print("\n--- 4. ЗАДАНИЕ ПО ВАРИАНТУ ---")
     print("1 - Вариант № 1 (Смирнов Н. М., ФИТ-242)")
     print("2 - Другой вариант из базы (1–30)")
-    print("3 - Ввести произвольный шифр-текст")
+    print("3 - Прочитать шифр-текст из файла")
+    print("4 - Ввести произвольный шифр-текст с клавиатуры")
     choice = input("Выбор [по умолчанию 1]: ").strip()
 
     var_num = 1
     custom_ct = None
+    default_src = os.path.join(OUTPUTS_DIR, "encrypted.txt")
 
     if choice == "2":
         while True:
@@ -325,10 +327,33 @@ def handle_variant_task() -> None:
             except ValueError:
                 print(">> Введите целое число.")
     elif choice == "3":
-        custom_ct = prompt_text_source("шифр-текст", record_hint="ЗАШИФРОВАННЫЙ ТЕКСТ")
-        if not custom_ct:
+        hint = f" [по умолчанию: {default_src}]" if os.path.isfile(default_src) else ""
+        filepath = input(f"Путь к файлу с шифр-текстом{hint}: ").strip() or (default_src if os.path.isfile(default_src) else "")
+        if not filepath:
+            print(">> Ошибка: путь не может быть пустым.")
             return
-        custom_ct = inspect_and_prepare_text(custom_ct, cc.get_alphabet("ru"), filter_alpha=False)
+        if not os.path.isfile(filepath):
+            print(f">> Ошибка: файл '{filepath}' не найден.")
+            return
+        try:
+            loaded_ct = load_text_from_file_or_record(filepath, "ШИФР-ТЕКСТ")
+            if not loaded_ct:
+                print(">> Ошибка: файл пуст.")
+                return
+            preview = loaded_ct if len(loaded_ct) <= 60 else loaded_ct[:57] + "..."
+            print(f">> Успешно прочитано ({len(loaded_ct)} симв.): {preview}")
+            custom_ct = inspect_and_prepare_text(loaded_ct, cc.get_alphabet("ru"), filter_alpha=False)
+            if not custom_ct:
+                return
+        except Exception as e:
+            print(f">> Ошибка при чтении файла: {e}")
+            return
+    elif choice == "4":
+        text = input("Введите шифр-текст: ")
+        if not text.strip():
+            print(">> Ошибка: введен пустой текст.")
+            return
+        custom_ct = inspect_and_prepare_text(text.rstrip("\r\n"), cc.get_alphabet("ru"), filter_alpha=False)
         if not custom_ct:
             return
 
@@ -375,9 +400,13 @@ def handle_variant_task() -> None:
     print(f"ЗАШИФРОВАННЫЕ ФАМИЛИЯ И НАЗВАНИЕ (ШТ): {author_work_st}")
     print("=" * 70)
 
-    res_file = os.path.join(OUTPUTS_DIR, f"variant_{var_num}_solution.txt")
+    default_name = f"variant_{var_num}_solution.txt" if custom_ct is None else "variant_custom_solution.txt"
+    default_res_file = os.path.join(OUTPUTS_DIR, default_name)
+    save_file = input(f"\nФайл для сохранения отчета [по умолчанию: {default_res_file}]: ").strip() or default_res_file
+
+    var_title = f"ВАРИАНТУ № {var_num}" if custom_ct is None else "ПОЛЬЗОВАТЕЛЬСКОМУ ШИФР-ТЕКСТУ"
     out_lines = [
-        f"ОТЧЕТНЫЙ РЕЗУЛЬТАТ ПО ВАРИАНТУ № {var_num}",
+        f"ОТЧЕТНЫЙ РЕЗУЛЬТАТ ПО {var_title}",
         f"Студент: Смирнов Н. М., группа ФИТ-242\n",
         f"ШИФР-ТЕКСТ (ШТ): {ciphertext}",
         f"РАСШИФРОВАННЫЙ ТЕКСТ (ОТ): {plaintext}",
@@ -390,8 +419,16 @@ def handle_variant_task() -> None:
     for k, dec_text in variants:
         out_lines.append(f"k = {k:2d}: {dec_text}")
 
-    save_text_file(res_file, "\n".join(out_lines) + "\n")
-    print(f">> Результат сохранен в: {res_file}")
+    save_text_file(save_file, "\n".join(out_lines) + "\n")
+    print(f">> Результат сохранен в: {save_file}")
+
+    save_cipher = input("Сохранить зашифрованную строку (автор/произведение) в отдельный файл? (y/n, по умолчанию n): ").strip().lower()
+    if save_cipher in ("y", "yes", "да"):
+        default_cipher_file = os.path.join(OUTPUTS_DIR, f"variant_{var_num}_cipher.txt" if custom_ct is None else "variant_custom_cipher.txt")
+        save_cf = input(f"Файл для сохранения шифровки [по умолчанию: {default_cipher_file}]: ").strip() or default_cipher_file
+        cipher_rec = format_encryption_record(author_work_ot, author_work_st, key, is_decryption=False)
+        save_text_file(save_cf, cipher_rec)
+        print(f">> Шифр-текст сохранен в: {save_cf}")
 
 
 def handle_change_alphabet() -> None:
