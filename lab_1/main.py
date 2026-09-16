@@ -35,6 +35,7 @@ OUTPUTS_DIR = os.path.join(CURRENT_DIR, "outputs")
 os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
 current_alphabet: cc.Alphabet = cc.DEFAULT_ALPHABET
+last_used_key: Optional[int] = None
 
 
 def clear_screen() -> None:
@@ -177,6 +178,10 @@ def prompt_key(alpha: cc.Alphabet, prompt_text: str = "", default_key: Optional[
             prompt_text = f"Введите ключ k (1..{max_k}, 0 для отмены, Enter для {default_eff}): "
         else:
             prompt_text = f"Введите ключ k (1..{max_k}, 0 для отмены): "
+    elif default_key is not None:
+        default_eff = default_key % m
+        if f"{default_eff}" not in prompt_text:
+            prompt_text = prompt_text.rstrip("\n :") + f" [Enter для {default_eff}, 0 для отмены]: "
     while True:
         try:
             val = input(prompt_text).strip()
@@ -215,6 +220,7 @@ def prompt_key(alpha: cc.Alphabet, prompt_text: str = "", default_key: Optional[
 
 
 def handle_encrypt() -> None:
+    global last_used_key
     print("\n--- 1. ШИФРОВАНИЕ ТЕКСТА ---")
     default_src = os.path.join(OUTPUTS_DIR, "plaintext.txt")
     raw_text = prompt_text_source(
@@ -234,9 +240,10 @@ def handle_encrypt() -> None:
     if prepared_text is None:
         return
 
-    key = prompt_key(current_alphabet)
+    key = prompt_key(current_alphabet, default_key=last_used_key)
     if key is None:
         return
+    last_used_key = key
 
     ciphertext = cc.encrypt(
         prepared_text,
@@ -263,6 +270,7 @@ def handle_encrypt() -> None:
 
 
 def handle_decrypt() -> None:
+    global last_used_key
     print("\n--- 2. РАСШИФРОВАНИЕ ТЕКСТА ---")
     default_src = os.path.join(OUTPUTS_DIR, "encrypted.txt")
     ciphertext, file_key = prompt_text_source_with_key(
@@ -282,12 +290,11 @@ def handle_decrypt() -> None:
     if prepared_ct is None:
         return
 
-    if file_key is not None:
-        key = prompt_key(current_alphabet, default_key=file_key)
-    else:
-        key = prompt_key(current_alphabet)
+    chosen_default = file_key if file_key is not None else last_used_key
+    key = prompt_key(current_alphabet, default_key=chosen_default)
     if key is None:
         return
+    last_used_key = key
 
     plaintext = cc.decrypt(prepared_ct, key, alphabet=current_alphabet, case_mode=case_mode)
 
@@ -347,6 +354,7 @@ def handle_bruteforce() -> None:
 
 
 def handle_variant_task() -> None:
+    global last_used_key
     print("\n--- 4. ЗАДАНИЕ ПО ВАРИАНТУ ---")
     print("1 - Вариант № 1 (Смирнов Н. М., ФИТ-242)")
     print("2 - Другой вариант из базы (1–30)")
@@ -426,7 +434,7 @@ def handle_variant_task() -> None:
         author = var_data["author"]
         work = var_data["work"]
         author_work_ot = var_data["author_work_ot"]
-        author_work_st = var_data["author_work_st"]
+        author_work_st = ru_alpha.encrypt(author_work_ot, expected_key)
     else:
         ciphertext = custom_ct
         expected_key = None
@@ -441,7 +449,7 @@ def handle_variant_task() -> None:
         key = expected_key
         plaintext = expected_pt
     else:
-        key = prompt_key(ru_alpha, "\nУкажите истинный ключ k по результатам: ")
+        key = prompt_key(ru_alpha, "\nУкажите истинный ключ k по результатам: ", default_key=last_used_key)
         if key is None:
             return
         plaintext = cc.decrypt(ciphertext, key, alphabet=ru_alpha)
@@ -455,6 +463,8 @@ def handle_variant_task() -> None:
             return
         author_work_ot = ru_alpha.prepare_canonical_text(f"{author}{work}")
         author_work_st = ru_alpha.encrypt(author_work_ot, key)
+
+    last_used_key = key
 
     print("\n" + "=" * 70)
     print("ИТОГОВЫЙ РЕЗУЛЬТАТ:")

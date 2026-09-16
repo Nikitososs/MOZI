@@ -93,6 +93,7 @@ def test_all_database_variants(var_no, all_variants):
 
     assert decrypt(ct, k) == pt
     assert encrypt(pt, k) == ct
+    assert encrypt(data["author_work_ot"], k) == data["author_work_st"]
 
 
 def test_file_output_helpers(tmp_path):
