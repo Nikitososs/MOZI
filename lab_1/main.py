@@ -82,11 +82,11 @@ def prompt_text_source_with_key(prompt_label: str, record_hint: str = "") -> Tup
             print(f">> Ошибка при чтении файла: {e}")
             return "", None
     else:
-        text = input(f"Введите {prompt_label}: ").strip()
-        if not text:
+        text = input(f"Введите {prompt_label}: ")
+        if not text.strip():
             print(">> Ошибка: введен пустой текст.")
             return "", None
-        return text, None
+        return text.rstrip("\r\n"), None
 
 
 def prompt_text_source(prompt_label: str, record_hint: str = "") -> str:
@@ -94,12 +94,30 @@ def prompt_text_source(prompt_label: str, record_hint: str = "") -> str:
     return text
 
 
+def prompt_case_mode(is_encryption: bool = True) -> Tuple[str, bool]:
+    op_label = "шифрования" if is_encryption else "расшифрования"
+    print(f"\nРежим обработки регистра и символов ({op_label}):")
+    print("1 - Оставить как есть (сохранять регистр букв; сторонние символы не трогать)")
+    print("2 - Привести к одному регистру (к нижнему регистру; сторонние символы не трогать)")
+    if is_encryption:
+        print("3 - Канонический вид (только буквы алфавита в нижнем регистре, удалить пробелы и знаки)")
+        choice = input("Выбор (1/2/3, по умолчанию 1): ").strip()
+        if choice == "2":
+            return "lower", False
+        elif choice == "3":
+            return "lower", True
+        return "preserve", False
+    else:
+        choice = input("Выбор (1/2, по умолчанию 1): ").strip()
+        return ("lower" if choice == "2" else "preserve"), False
+
+
 def inspect_and_prepare_text(
     text: str,
     alpha: cc.Alphabet,
     filter_alpha: bool = False
 ) -> Optional[str]:
-    clean_text = text.strip()
+    clean_text = text.rstrip("\r\n")
     if not clean_text:
         print(">> Ошибка: входной текст пуст.")
         return None
@@ -127,6 +145,9 @@ def inspect_and_prepare_text(
             print(">> Ошибка: после канонической фильтрации текст пуст.")
             return None
         return canonical
+
+    if non_alpha_count > 0:
+        print(f">> Инфо: {alpha_chars_count} симв. из алфавита '{alpha.name}' будут обработаны, {non_alpha_count} сторонних символов (знаки/цифры/иные раскладки) останутся без изменений.")
 
     return clean_text
 
@@ -179,18 +200,20 @@ def handle_encrypt() -> None:
     if not raw_text:
         return
 
-    print("\nФорматирование:")
-    print("1 - Сохранять пробелы и знаки препинания")
-    print("2 - Только символы алфавита (канонический вид)")
-    fmt_choice = input("Выбор (1/2, по умолчанию 1): ").strip()
-    filter_alpha = (fmt_choice == "2")
+    case_mode, filter_alpha = prompt_case_mode(is_encryption=True)
 
     prepared_text = inspect_and_prepare_text(raw_text, current_alphabet, filter_alpha=filter_alpha)
     if prepared_text is None:
         return
 
     key = prompt_key(current_alphabet)
-    ciphertext = cc.encrypt(prepared_text, key, filter_non_alpha=False, alphabet=current_alphabet)
+    ciphertext = cc.encrypt(
+        prepared_text,
+        key,
+        filter_non_alpha=False,
+        alphabet=current_alphabet,
+        case_mode=case_mode
+    )
 
     print(f"\nАлфавит:        {current_alphabet.name}")
     print(f"Исходный текст: {prepared_text}")
@@ -215,12 +238,14 @@ def handle_decrypt() -> None:
     if prepared_ct is None:
         return
 
+    case_mode, _ = prompt_case_mode(is_encryption=False)
+
     if file_key is not None:
         key = prompt_key(current_alphabet, default_key=file_key)
     else:
         key = prompt_key(current_alphabet)
 
-    plaintext = cc.decrypt(prepared_ct, key, alphabet=current_alphabet)
+    plaintext = cc.decrypt(prepared_ct, key, alphabet=current_alphabet, case_mode=case_mode)
 
     print(f"\nАлфавит:              {current_alphabet.name}")
     print(f"Шифр-текст:           {prepared_ct}")
@@ -245,7 +270,9 @@ def handle_bruteforce() -> None:
     if prepared_ct is None:
         return
 
-    variants = cc.brute_force(prepared_ct, alphabet=current_alphabet)
+    case_mode, _ = prompt_case_mode(is_encryption=False)
+
+    variants = cc.brute_force(prepared_ct, alphabet=current_alphabet, case_mode=case_mode)
 
     print(f"\nТаблица перебора (k = 1..{current_alphabet.power - 1}, {current_alphabet.name}):")
     print(f"{'Ключ k':<8} | {'Расшифрованный текст'}")

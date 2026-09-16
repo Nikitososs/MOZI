@@ -158,3 +158,38 @@ def test_custom_alphabet_registration():
     bf = brute_force(enc, alphabet=custom)
     assert len(bf) == 9
 
+
+def test_case_preservation_and_non_alphabet_symbols():
+    raw_text = "Привет, World! 123"
+    # 1. Режим сохранения регистра: буквы русского алфавита шифруются с сохранением регистра,
+    # знаки препинания, пробелы, цифры и буквы других раскладок остаются нетронутыми
+    enc_preserve = encrypt(raw_text, 1, case_mode="preserve")
+    assert enc_preserve == "Рсйгжу, World! 123"
+    assert decrypt(enc_preserve, 1, case_mode="preserve") == raw_text
+
+    # 2. Режим приведения к нижнему регистру (сторонние символы не трогаем)
+    enc_lower = encrypt(raw_text, 1, case_mode="lower")
+    assert enc_lower == "рсйгжу, World! 123"
+
+    # 3. Режим приведения к верхнему регистру (сторонние символы не трогаем)
+    enc_upper = encrypt(raw_text, 1, case_mode="upper")
+    assert enc_upper == "РСЙГЖУ, World! 123"
+
+
+def test_english_case_preservation_with_cyrillic_symbols():
+    en = get_alphabet("en")
+    raw = "Hello, Мир! 456"
+    enc = encrypt(raw, 3, alphabet=en, case_mode="preserve")
+    assert enc == "Khoor, Мир! 456"
+    assert decrypt(enc, 3, alphabet=en, case_mode="preserve") == raw
+
+
+def test_russian_yo_case_preservation():
+    raw = "Ёж и Медведь"
+    enc = encrypt(raw, 1, case_mode="preserve")
+    # 'Ё' -> 'е' (code 5) + 1 = 'ж' (code 6) -> 'Ж'
+    assert enc.startswith("Жз")
+    dec = decrypt(enc, 1, case_mode="preserve")
+    assert dec == "Еж и Медведь"
+
+
