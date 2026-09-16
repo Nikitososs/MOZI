@@ -54,13 +54,18 @@ def print_banner() -> None:
     print("=" * 70)
 
 
-def prompt_text_source_with_key(prompt_label: str, record_hint: str = "") -> Tuple[str, Optional[int]]:
+def prompt_text_source_with_key(
+    prompt_label: str,
+    record_hint: str = "",
+    default_filepath: str = ""
+) -> Tuple[str, Optional[int]]:
     print(f"\nСпособ ввода ({prompt_label}):")
     print("1 - Ввести вручную с клавиатуры")
     print("2 - Прочитать из файла")
     src_choice = input("Выбор (1/2, по умолчанию 1): ").strip()
     if src_choice == "2":
-        filepath = input("Путь к файлу: ").strip()
+        hint = f" [по умолчанию: {default_filepath}]" if default_filepath else ""
+        filepath = input(f"Путь к файлу{hint}: ").strip() or default_filepath
         if not filepath:
             print(">> Ошибка: путь не может быть пустым.")
             return "", None
@@ -89,8 +94,8 @@ def prompt_text_source_with_key(prompt_label: str, record_hint: str = "") -> Tup
         return text.rstrip("\r\n"), None
 
 
-def prompt_text_source(prompt_label: str, record_hint: str = "") -> str:
-    text, _ = prompt_text_source_with_key(prompt_label, record_hint)
+def prompt_text_source(prompt_label: str, record_hint: str = "", default_filepath: str = "") -> str:
+    text, _ = prompt_text_source_with_key(prompt_label, record_hint, default_filepath=default_filepath)
     return text
 
 
@@ -99,17 +104,13 @@ def prompt_case_mode(is_encryption: bool = True) -> Tuple[str, bool]:
     print(f"\nРежим обработки регистра и символов ({op_label}):")
     print("1 - Оставить как есть (сохранять регистр букв; сторонние символы не трогать)")
     print("2 - Привести к одному регистру (к нижнему регистру; сторонние символы не трогать)")
-    if is_encryption:
-        print("3 - Канонический вид (только буквы алфавита в нижнем регистре, удалить пробелы и знаки)")
-        choice = input("Выбор (1/2/3, по умолчанию 1): ").strip()
-        if choice == "2":
-            return "lower", False
-        elif choice == "3":
-            return "lower", True
-        return "preserve", False
-    else:
-        choice = input("Выбор (1/2, по умолчанию 1): ").strip()
-        return ("lower" if choice == "2" else "preserve"), False
+    print("3 - Канонический вид (только буквы алфавита в нижнем регистре, удалить пробелы и знаки)")
+    choice = input("Выбор (1/2/3, по умолчанию 1): ").strip()
+    if choice == "2":
+        return "lower", False
+    elif choice == "3":
+        return "lower", True
+    return "preserve", False
 
 
 def inspect_and_prepare_text(
@@ -196,7 +197,12 @@ def prompt_key(alpha: cc.Alphabet, prompt_text: str = "", default_key: Optional[
 
 def handle_encrypt() -> None:
     print("\n--- 1. ШИФРОВАНИЕ ТЕКСТА ---")
-    raw_text = prompt_text_source("исходный текст", record_hint="ОТКРЫТЫЙ ТЕКСТ")
+    default_src = os.path.join(OUTPUTS_DIR, "plaintext.txt")
+    raw_text = prompt_text_source(
+        "исходный текст",
+        record_hint="ОТКРЫТЫЙ ТЕКСТ",
+        default_filepath=default_src if os.path.isfile(default_src) else ""
+    )
     if not raw_text:
         return
 
@@ -230,15 +236,20 @@ def handle_encrypt() -> None:
 
 def handle_decrypt() -> None:
     print("\n--- 2. РАСШИФРОВАНИЕ ТЕКСТА ---")
-    ciphertext, file_key = prompt_text_source_with_key("шифр-текст", record_hint="ШИФР-ТЕКСТ")
+    default_src = os.path.join(OUTPUTS_DIR, "encrypted.txt")
+    ciphertext, file_key = prompt_text_source_with_key(
+        "шифр-текст",
+        record_hint="ШИФР-ТЕКСТ",
+        default_filepath=default_src if os.path.isfile(default_src) else ""
+    )
     if not ciphertext:
         return
 
-    prepared_ct = inspect_and_prepare_text(ciphertext, current_alphabet, filter_alpha=False)
+    case_mode, filter_alpha = prompt_case_mode(is_encryption=False)
+
+    prepared_ct = inspect_and_prepare_text(ciphertext, current_alphabet, filter_alpha=filter_alpha)
     if prepared_ct is None:
         return
-
-    case_mode, _ = prompt_case_mode(is_encryption=False)
 
     if file_key is not None:
         key = prompt_key(current_alphabet, default_key=file_key)
@@ -262,15 +273,20 @@ def handle_decrypt() -> None:
 
 def handle_bruteforce() -> None:
     print("\n--- 3. ПОЛНЫЙ ПЕРЕБОР КЛЮЧЕЙ (ВЗЛОМ) ---")
-    ciphertext = prompt_text_source("шифр-текст", record_hint="ЗАШИФРОВАННЫЙ ТЕКСТ")
+    default_src = os.path.join(OUTPUTS_DIR, "encrypted.txt")
+    ciphertext = prompt_text_source(
+        "шифр-текст",
+        record_hint="ЗАШИФРОВАННЫЙ ТЕКСТ",
+        default_filepath=default_src if os.path.isfile(default_src) else ""
+    )
     if not ciphertext:
         return
 
-    prepared_ct = inspect_and_prepare_text(ciphertext, current_alphabet, filter_alpha=False)
+    case_mode, filter_alpha = prompt_case_mode(is_encryption=False)
+
+    prepared_ct = inspect_and_prepare_text(ciphertext, current_alphabet, filter_alpha=filter_alpha)
     if prepared_ct is None:
         return
-
-    case_mode, _ = prompt_case_mode(is_encryption=False)
 
     variants = cc.brute_force(prepared_ct, alphabet=current_alphabet, case_mode=case_mode)
 

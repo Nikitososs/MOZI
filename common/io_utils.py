@@ -32,7 +32,7 @@ def extract_key_from_text(content: str) -> Optional[int]:
 
 
 def load_text_from_file_or_record(filepath: str, preferred_prefix: str = "") -> str:
-    content = read_text_file(filepath).strip()
+    content = read_text_file(filepath).rstrip("\r\n")
     if preferred_prefix:
         pref = preferred_prefix.upper()
         # 1. Прямой поиск префикса
@@ -40,7 +40,7 @@ def load_text_from_file_or_record(filepath: str, preferred_prefix: str = "") -> 
             if ":" in line:
                 key, _, val = line.partition(":")
                 if pref in key.upper():
-                    return val.strip()
+                    return val[1:] if val.startswith(" ") else val
 
         # 2. Нестрогий поиск открытого/расшифрованного текста
         if any(w in pref for w in ["ОТКРЫТ", "РАСШИФР"]):
@@ -49,7 +49,7 @@ def load_text_from_file_or_record(filepath: str, preferred_prefix: str = "") -> 
                     key, _, val = line.partition(":")
                     ku = key.upper()
                     if "ОТКРЫТ" in ku or "РАСШИФР" in ku:
-                        return val.strip()
+                        return val[1:] if val.startswith(" ") else val
 
         # 3. Нестрогий поиск шифр-текста / зашифрованного текста
         if "ЗАШИФР" in pref or ("ШИФР" in pref and "РАСШИФР" not in pref):
@@ -58,7 +58,7 @@ def load_text_from_file_or_record(filepath: str, preferred_prefix: str = "") -> 
                     key, _, val = line.partition(":")
                     ku = key.upper()
                     if "РАСШИФР" not in ku and ("ШИФР" in ku or "ЗАШИФР" in ku):
-                        return val.strip()
+                        return val[1:] if val.startswith(" ") else val
 
     return content
 
