@@ -6,8 +6,8 @@
 from typing import Any, Dict, List, Tuple
 import os
 
-ALPHABET_POWER: int = 32
 ALPHABET_SYMBOLS: str = "абвгдежзийклмнопрстуфхцчшщъыьэюя"
+ALPHABET_POWER: int = len(ALPHABET_SYMBOLS)
 
 CHAR_TO_CODE: Dict[str, int] = {char: idx for idx, char in enumerate(ALPHABET_SYMBOLS)}
 CODE_TO_CHAR: Dict[int, str] = {idx: char for idx, char in enumerate(ALPHABET_SYMBOLS)}
