@@ -1,6 +1,10 @@
 import pytest
 from common.io_utils import save_text_file, format_encryption_record, format_bruteforce_records
 from lab_1.caesar_cipher import (
+    Alphabet,
+    EN_ALPHABET,
+    get_alphabet,
+    register_alphabet,
     A,
     A_inv,
     E_k,
@@ -95,3 +99,35 @@ def test_file_output_helpers(tmp_path):
     assert "ШИФРОВАНИЕ" in content
     assert "КЛЮЧ: 1" in content
     assert "ужуу" in content
+
+
+def test_english_alphabet_preset():
+    en = get_alphabet("en")
+    assert en.power == 26
+    raw = "Hello, World!"
+    enc = encrypt(raw, 3, alphabet=en)
+    assert enc == "khoor, zruog!"
+    dec = decrypt(enc, 3, alphabet=en)
+    assert dec == "hello, world!"
+
+    bf = brute_force("khoor", alphabet=en)
+    assert len(bf) == 25
+    found_plaintext = [text for k, text in bf if k == 3]
+    assert found_plaintext == ["hello"]
+
+
+def test_custom_alphabet_registration():
+    custom = Alphabet(
+        name="Digits (m=10)",
+        symbols="0123456789"
+    )
+    register_alphabet("digits", custom)
+
+    assert get_alphabet("digits").power == 10
+    enc = encrypt("12345", 2, alphabet=custom)
+    assert enc == "34567"
+    assert decrypt(enc, 2, alphabet=custom) == "12345"
+
+    bf = brute_force(enc, alphabet=custom)
+    assert len(bf) == 9
+
