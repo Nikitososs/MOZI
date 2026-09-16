@@ -11,8 +11,12 @@ def save_text_file(filepath: str, content: str) -> None:
 
 
 def read_text_file(filepath: str) -> str:
-    with open(filepath, "r", encoding="utf-8") as f:
-        return f.read()
+    try:
+        with open(filepath, "r", encoding="utf-8-sig") as f:
+            return f.read()
+    except UnicodeDecodeError:
+        with open(filepath, "r", encoding="cp1251") as f:
+            return f.read()
 
 
 def extract_key_from_text(content: str) -> Optional[int]:

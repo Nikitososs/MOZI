@@ -94,11 +94,50 @@ def prompt_text_source(prompt_label: str, record_hint: str = "") -> str:
     return text
 
 
+def inspect_and_prepare_text(
+    text: str,
+    alpha: cc.Alphabet,
+    filter_alpha: bool = False
+) -> Optional[str]:
+    clean_text = text.strip()
+    if not clean_text:
+        print(">> Ошибка: входной текст пуст.")
+        return None
+
+    alpha_chars_count = sum(1 for ch in clean_text if alpha.normalize_char(ch) in alpha.char_to_code)
+    total_chars = len(clean_text)
+    non_alpha_count = total_chars - alpha_chars_count
+
+    if alpha_chars_count == 0:
+        print(f"\n>> Предупреждение: ни один символ введенного текста не принадлежит алфавиту '{alpha.name}'.")
+        print(">> Возможно, выбрана неверная раскладка или требуется сменить алфавит (пункт 5 меню).")
+        if filter_alpha:
+            print(">> Ошибка: в каноническом режиме результат будет пустым.")
+            return None
+        confirm = input("Продолжить операцию без изменений? (y/n, по умолчанию n): ").strip().lower()
+        if confirm not in ("y", "yes", "да"):
+            return None
+        return clean_text
+
+    if filter_alpha:
+        if non_alpha_count > 0:
+            print(f">> Инфо: отфильтровано {non_alpha_count} спецсимволов/пробелов вне алфавита.")
+        canonical = alpha.prepare_canonical_text(clean_text)
+        if not canonical:
+            print(">> Ошибка: после канонической фильтрации текст пуст.")
+            return None
+        return canonical
+
+    return clean_text
+
+
 def prompt_key(alpha: cc.Alphabet, prompt_text: str = "", default_key: Optional[int] = None) -> int:
-    max_k = alpha.power - 1
+    m = alpha.power
+    max_k = m - 1
     if not prompt_text:
         if default_key is not None:
-            prompt_text = f"Введите ключ k (1..{max_k}, Enter для {default_key}): "
+            default_eff = default_key % m
+            prompt_text = f"Введите ключ k (1..{max_k}, Enter для {default_eff}): "
         else:
             prompt_text = f"Введите ключ k (1..{max_k}): "
     while True:
@@ -106,13 +145,30 @@ def prompt_key(alpha: cc.Alphabet, prompt_text: str = "", default_key: Optional[
             val = input(prompt_text).strip()
             if not val:
                 if default_key is not None:
-                    return default_key
-                print(">> Ошибка: ключ не может быть пустым.")
+                    k = default_key
+                else:
+                    print(">> Ошибка: ключ не может быть пустым.")
+                    continue
+            else:
+                k = int(val)
+
+            k_eff = k % m
+
+            if k_eff == 0:
+                print(f"\n>> Предупреждение: введенный ключ k = {k} кратен мощности алфавита m = {m} ({k} ≡ 0 mod {m}).")
+                print(">> При сдвиге на 0 текст останется неизменным (тождественное преобразование).")
+                confirm = input("Продолжить с нулевым сдвигом? (y/n, по умолчанию n): ").strip().lower()
+                if confirm in ("y", "yes", "да"):
+                    return 0
                 continue
-            k = int(val)
-            if 1 <= k <= max_k:
-                return k
-            print(f">> Ошибка: ключ должен лежать в диапазоне от 1 до {max_k}.")
+
+            if k != k_eff:
+                print(f"\n>> Уведомление: введен ключ k = {k}, превышающий мощность алфавита m = {m} (или выходящий за [1..{max_k}]).")
+                print(f">> Выполнено приведение по модулю: {k} ≡ {k_eff} (mod {m}).")
+                print(f">> Шифрование будет производиться с числом, сравнимым с ключом по модулю {m} (k = {k_eff}).\n")
+                return k_eff
+
+            return k
         except ValueError:
             print(">> Ошибка: ключ должен быть целым числом.")
 
@@ -129,18 +185,22 @@ def handle_encrypt() -> None:
     fmt_choice = input("Выбор (1/2, по умолчанию 1): ").strip()
     filter_alpha = (fmt_choice == "2")
 
+    prepared_text = inspect_and_prepare_text(raw_text, current_alphabet, filter_alpha=filter_alpha)
+    if prepared_text is None:
+        return
+
     key = prompt_key(current_alphabet)
-    ciphertext = cc.encrypt(raw_text, key, filter_non_alpha=filter_alpha, alphabet=current_alphabet)
+    ciphertext = cc.encrypt(prepared_text, key, filter_non_alpha=False, alphabet=current_alphabet)
 
     print(f"\nАлфавит:        {current_alphabet.name}")
-    print(f"Исходный текст: {raw_text}")
+    print(f"Исходный текст: {prepared_text}")
     print(f"Ключ k:         {key}")
     print(f"Шифр-текст:     {ciphertext}")
 
     default_file = os.path.join(OUTPUTS_DIR, "encrypted.txt")
     save_file = input(f"Файл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
 
-    record = format_encryption_record(raw_text, ciphertext, key, is_decryption=False)
+    record = format_encryption_record(prepared_text, ciphertext, key, is_decryption=False)
     save_text_file(save_file, record)
     print(f">> Сохранено в: {save_file}")
 
@@ -151,22 +211,26 @@ def handle_decrypt() -> None:
     if not ciphertext:
         return
 
-    if file_key is not None and 1 <= file_key <= (current_alphabet.power - 1):
+    prepared_ct = inspect_and_prepare_text(ciphertext, current_alphabet, filter_alpha=False)
+    if prepared_ct is None:
+        return
+
+    if file_key is not None:
         key = prompt_key(current_alphabet, default_key=file_key)
     else:
         key = prompt_key(current_alphabet)
 
-    plaintext = cc.decrypt(ciphertext, key, alphabet=current_alphabet)
+    plaintext = cc.decrypt(prepared_ct, key, alphabet=current_alphabet)
 
     print(f"\nАлфавит:              {current_alphabet.name}")
-    print(f"Шифр-текст:           {ciphertext}")
+    print(f"Шифр-текст:           {prepared_ct}")
     print(f"Ключ k:               {key}")
     print(f"Расшифрованный текст: {plaintext}")
 
     default_file = os.path.join(OUTPUTS_DIR, "decrypted.txt")
     save_file = input(f"Файл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
 
-    record = format_encryption_record(ciphertext, plaintext, key, is_decryption=True)
+    record = format_encryption_record(prepared_ct, plaintext, key, is_decryption=True)
     save_text_file(save_file, record)
     print(f">> Сохранено в: {save_file}")
 
@@ -177,7 +241,11 @@ def handle_bruteforce() -> None:
     if not ciphertext:
         return
 
-    variants = cc.brute_force(ciphertext, alphabet=current_alphabet)
+    prepared_ct = inspect_and_prepare_text(ciphertext, current_alphabet, filter_alpha=False)
+    if prepared_ct is None:
+        return
+
+    variants = cc.brute_force(prepared_ct, alphabet=current_alphabet)
 
     print(f"\nТаблица перебора (k = 1..{current_alphabet.power - 1}, {current_alphabet.name}):")
     print(f"{'Ключ k':<8} | {'Расшифрованный текст'}")
@@ -188,7 +256,7 @@ def handle_bruteforce() -> None:
     default_file = os.path.join(OUTPUTS_DIR, "bruteforce_variants.txt")
     save_file = input(f"\nФайл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
 
-    content = format_bruteforce_records(ciphertext, variants)
+    content = format_bruteforce_records(prepared_ct, variants)
     save_text_file(save_file, content)
     print(f">> Таблица сохранена в: {save_file}")
 
@@ -215,6 +283,9 @@ def handle_variant_task() -> None:
                 print(">> Введите целое число.")
     elif choice == "3":
         custom_ct = prompt_text_source("шифр-текст", record_hint="ЗАШИФРОВАННЫЙ ТЕКСТ")
+        if not custom_ct:
+            return
+        custom_ct = inspect_and_prepare_text(custom_ct, cc.get_alphabet("ru"), filter_alpha=False)
         if not custom_ct:
             return
 
