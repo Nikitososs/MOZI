@@ -117,37 +117,29 @@ def E_k(x: int, k: int) -> int:
 
 
 def D_k(y: int, k: int) -> int:
-    return (y - k) % ALPHABET_POWER
+    return E_k(y, -k)
 
 
 def encrypt_symbol(char: str, k: int) -> str:
     norm = normalize_char(char)
-    if norm in CHAR_TO_CODE:
-        return A_inv(E_k(A(norm), k))
-    return char
+    return A_inv(E_k(CHAR_TO_CODE[norm], k)) if norm in CHAR_TO_CODE else char
 
 
 def decrypt_symbol(char: str, k: int) -> str:
-    norm = normalize_char(char)
-    if norm in CHAR_TO_CODE:
-        return A_inv(D_k(A(norm), k))
-    return char
+    return encrypt_symbol(char, -k)
 
 
 def prepare_canonical_text(text: str) -> str:
-    return "".join(
-        normalize_char(ch) for ch in text if normalize_char(ch) in CHAR_TO_CODE
-    )
+    return "".join(normalize_char(ch) for ch in text if normalize_char(ch) in CHAR_TO_CODE)
 
 
 def encrypt(text: str, k: int, filter_non_alpha: bool = False) -> str:
-    if filter_non_alpha:
-        text = prepare_canonical_text(text)
-    return "".join(encrypt_symbol(ch, k) for ch in text)
+    src = prepare_canonical_text(text) if filter_non_alpha else text
+    return "".join(encrypt_symbol(ch, k) for ch in src)
 
 
 def decrypt(text: str, k: int) -> str:
-    return "".join(decrypt_symbol(ch, k) for ch in text)
+    return encrypt(text, -k)
 
 
 def brute_force(ciphertext: str) -> List[Tuple[int, str]]:

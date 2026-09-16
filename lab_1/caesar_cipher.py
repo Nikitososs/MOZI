@@ -34,35 +34,24 @@ class Alphabet:
         return (x + k) % self.power
 
     def D_k(self, y: int, k: int) -> int:
-        return (y - k) % self.power
+        return self.E_k(y, -k)
 
     def encrypt_symbol(self, char: str, k: int) -> str:
         norm = self.normalize_char(char)
-        if norm in self.char_to_code:
-            return self.A_inv(self.E_k(self.char_to_code[norm], k))
-        return char
+        return self.A_inv(self.E_k(self.char_to_code[norm], k)) if norm in self.char_to_code else char
 
     def decrypt_symbol(self, char: str, k: int) -> str:
-        norm = self.normalize_char(char)
-        if norm in self.char_to_code:
-            return self.A_inv(self.D_k(self.char_to_code[norm], k))
-        return char
+        return self.encrypt_symbol(char, -k)
 
     def prepare_canonical_text(self, text: str) -> str:
-        res = []
-        for ch in text:
-            norm = self.normalize_char(ch)
-            if norm in self.char_to_code:
-                res.append(norm)
-        return "".join(res)
+        return "".join(self.normalize_char(c) for c in text if self.normalize_char(c) in self.char_to_code)
 
     def encrypt(self, text: str, k: int, filter_non_alpha: bool = False) -> str:
-        if filter_non_alpha:
-            text = self.prepare_canonical_text(text)
-        return "".join(self.encrypt_symbol(ch, k) for ch in text)
+        src = self.prepare_canonical_text(text) if filter_non_alpha else text
+        return "".join(self.encrypt_symbol(c, k) for c in src)
 
     def decrypt(self, text: str, k: int) -> str:
-        return "".join(self.decrypt_symbol(ch, k) for ch in text)
+        return self.encrypt(text, -k)
 
     def brute_force(self, ciphertext: str) -> List[Tuple[int, str]]:
         return [(k, self.decrypt(ciphertext, k)) for k in range(1, self.power)]
@@ -102,37 +91,14 @@ ALPHABET_POWER: int = DEFAULT_ALPHABET.power
 CHAR_TO_CODE: Dict[str, int] = DEFAULT_ALPHABET.char_to_code
 CODE_TO_CHAR: Dict[int, str] = DEFAULT_ALPHABET.code_to_char
 
-
-def normalize_char(char: str, alphabet: Optional[Alphabet] = None) -> str:
-    return (alphabet or DEFAULT_ALPHABET).normalize_char(char)
-
-
-def A(char: str, alphabet: Optional[Alphabet] = None) -> int:
-    return (alphabet or DEFAULT_ALPHABET).A(char)
-
-
-def A_inv(code: int, alphabet: Optional[Alphabet] = None) -> str:
-    return (alphabet or DEFAULT_ALPHABET).A_inv(code)
-
-
-def E_k(x: int, k: int, alphabet: Optional[Alphabet] = None) -> int:
-    return (alphabet or DEFAULT_ALPHABET).E_k(x, k)
-
-
-def D_k(y: int, k: int, alphabet: Optional[Alphabet] = None) -> int:
-    return (alphabet or DEFAULT_ALPHABET).D_k(y, k)
-
-
-def encrypt_symbol(char: str, k: int, alphabet: Optional[Alphabet] = None) -> str:
-    return (alphabet or DEFAULT_ALPHABET).encrypt_symbol(char, k)
-
-
-def decrypt_symbol(char: str, k: int, alphabet: Optional[Alphabet] = None) -> str:
-    return (alphabet or DEFAULT_ALPHABET).decrypt_symbol(char, k)
-
-
-def prepare_canonical_text(text: str, alphabet: Optional[Alphabet] = None) -> str:
-    return (alphabet or DEFAULT_ALPHABET).prepare_canonical_text(text)
+A = DEFAULT_ALPHABET.A
+A_inv = DEFAULT_ALPHABET.A_inv
+E_k = DEFAULT_ALPHABET.E_k
+D_k = DEFAULT_ALPHABET.D_k
+normalize_char = DEFAULT_ALPHABET.normalize_char
+encrypt_symbol = DEFAULT_ALPHABET.encrypt_symbol
+decrypt_symbol = DEFAULT_ALPHABET.decrypt_symbol
+prepare_canonical_text = DEFAULT_ALPHABET.prepare_canonical_text
 
 
 def encrypt(
@@ -141,7 +107,7 @@ def encrypt(
     filter_non_alpha: bool = False,
     alphabet: Optional[Alphabet] = None
 ) -> str:
-    return (alphabet or DEFAULT_ALPHABET).encrypt(text, k, filter_non_alpha=filter_non_alpha)
+    return (alphabet or DEFAULT_ALPHABET).encrypt(text, k, filter_non_alpha)
 
 
 def decrypt(text: str, k: int, alphabet: Optional[Alphabet] = None) -> str:
