@@ -4,6 +4,7 @@
 """
 
 import pytest
+from common.io_utils import save_text_file, format_encryption_record, format_bruteforce_records
 from lab_1.caesar_cipher import (
     A,
     A_inv,
@@ -15,9 +16,7 @@ from lab_1.caesar_cipher import (
     encrypt,
     decrypt,
     brute_force,
-    save_result_to_file,
-    format_encryption_record,
-    format_bruteforce_records
+    
 )
 
 
@@ -108,7 +107,7 @@ def test_file_output_helpers(tmp_path):
     """Проверка функций форматирования и сохранения результатов в файл."""
     test_file = tmp_path / "test_enc.txt"
     record = format_encryption_record("тест", "ужуу", 1, is_decryption=False)
-    save_result_to_file(str(test_file), record)
+    save_text_file(str(test_file), record)
 
     assert test_file.exists()
     content = test_file.read_text(encoding="utf-8")

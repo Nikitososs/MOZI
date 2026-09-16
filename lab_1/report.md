@@ -145,16 +145,22 @@ $$N = 32 - 1 = 31text{ вариант}.$$
 
 ## 4. Код программы
 
-### Модуль caesar_cipher.py
+Программа построена по принципам модульности и разделения ответственности (Single Responsibility Principle):
+- `caesar_cipher.py` — чистое криптографическое ядро шифра Цезаря (только математика и функции алфавита);
+- `common/io_utils.py` — универсальный переиспользуемый модуль файлового ввода-вывода и форматирования отчетов (общий для всех лабораторных работ проекта);
+- `variants.py` — каталог исходных данных и шифр-текстов 30 вариантов лабораторной работы;
+- `main.py` — консольный пользовательский интерфейс.
+
+### Модуль чистого криптографического ядра `caesar_cipher.py`
 
 ```python
 """
 Модуль криптографического ядра: Шифр Цезаря.
 Дисциплина: МОЗИ, Лабораторная работа № 1.
+Содержит исключительно математические функции преобразования алфавита и алгоритм шифрования.
 """
 
-from typing import Any, Dict, List, Tuple
-import os
+from typing import Dict, List, Tuple
 
 ALPHABET_SYMBOLS: str = "абвгдежзийклмнопрстуфхцчшщъыьэюя"
 ALPHABET_POWER: int = len(ALPHABET_SYMBOLS)
@@ -183,17 +189,17 @@ def A_inv(code: int) -> str:
 
 
 def E_k(x: int, k: int) -> int:
-    """Прямое преобразование: y_i = (x_i + k) mod m."""
+    """Прямое линейное преобразование: y_i = (x_i + k) mod m."""
     return (x + k) % ALPHABET_POWER
 
 
 def D_k(y: int, k: int) -> int:
-    """Обратное преобразование: x_i = (y_i - k) mod m."""
+    """Обратное линейное преобразование: x_i = (y_i - k) mod m."""
     return (y - k) % ALPHABET_POWER
 
 
 def encrypt_symbol(char: str, k: int) -> str:
-    """Шифрование символа через композицию: c = A^(-1)(E_k(A(b)))."""
+    """Шифрование одного символа через композицию функций: c = A^(-1)(E_k(A(b)))."""
     norm = normalize_char(char)
     if norm in CHAR_TO_CODE:
         return A_inv(E_k(A(norm), k))
@@ -201,7 +207,7 @@ def encrypt_symbol(char: str, k: int) -> str:
 
 
 def decrypt_symbol(char: str, k: int) -> str:
-    """Расшифрование символа через композицию: b = A^(-1)(D_k(A(c)))."""
+    """Расшифрование одного символа через композицию функций: b = A^(-1)(D_k(A(c)))."""
     norm = normalize_char(char)
     if norm in CHAR_TO_CODE:
         return A_inv(D_k(A(norm), k))
@@ -219,24 +225,36 @@ def prepare_canonical_text(text: str) -> str:
 
 
 def encrypt(text: str, k: int, filter_non_alpha: bool = False) -> str:
-    """Посимвольное шифрование текста с ключом k."""
+    """Посимвольное шифрование текста шифром Цезаря с ключом k."""
     if filter_non_alpha:
         text = prepare_canonical_text(text)
     return "".join(encrypt_symbol(ch, k) for ch in text)
 
 
 def decrypt(text: str, k: int) -> str:
-    """Посимвольное расшифрование текста с ключом k."""
+    """Посимвольное расшифрование текста шифром Цезаря с ключом k."""
     return "".join(decrypt_symbol(ch, k) for ch in text)
 
 
 def brute_force(ciphertext: str) -> List[Tuple[int, str]]:
     """Полный перебор всех 31 возможных ключей."""
     return [(k, decrypt(ciphertext, k)) for k in range(1, ALPHABET_POWER)]
+```
+
+### Переиспользуемый модуль ввода-вывода `common/io_utils.py`
+
+```python
+"""
+Вспомогательный модуль для файловых операций и форматирования результатов.
+Переиспользуется во всех лабораторных работах проекта МОЗИ.
+"""
+
+from typing import Any, List, Tuple
+import os
 
 
-def save_result_to_file(filepath: str, content: str) -> None:
-    """Сохранение текста в файл в кодировке UTF-8."""
+def save_text_file(filepath: str, content: str) -> None:
+    """Сохранение текстовых данных в файл в кодировке UTF-8."""
     directory = os.path.dirname(filepath)
     if directory and not os.path.exists(directory):
         os.makedirs(directory, exist_ok=True)
@@ -244,35 +262,54 @@ def save_result_to_file(filepath: str, content: str) -> None:
         f.write(content)
 
 
-def format_encryption_record(text: str, result_text: str, key: int, is_decryption: bool = False) -> str:
+def read_text_file(filepath: str) -> str:
+    """Чтение текстовых данных из файла в кодировке UTF-8."""
+    with open(filepath, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def format_encryption_record(
+    text: str,
+    result_text: str,
+    key: Any,
+    cipher_name: str = "ШИФР ЦЕЗАРЯ",
+    is_decryption: bool = False
+) -> str:
+    """Форматирование записи шифрования/расшифрования для сохранения в файл."""
     op_name = "РАСШИФРОВАНИЕ" if is_decryption else "ШИФРОВАНИЕ"
     input_label = "ШИФР-ТЕКСТ (ШТ)" if is_decryption else "ОТКРЫТЫЙ ТЕКСТ (ОТ)"
     output_label = "РАСШИФРОВАННЫЙ ТЕКСТ (ОТ)" if is_decryption else "ЗАШИФРОВАННЫЙ ТЕКСТ (ШТ)"
     return (
-        f"=== {op_name} (ШИФР ЦЕЗАРЯ) ===n"
-        f"КЛЮЧ: {key}n"
-        f"{input_label}: {text}n"
-        f"{output_label}: {result_text}n"
+        f"=== {op_name} ({cipher_name}) ===\n"
+        f"КЛЮЧ: {key}\n"
+        f"{input_label}: {text}\n"
+        f"{output_label}: {result_text}\n"
     )
 
 
-def format_bruteforce_records(ciphertext: str, variants: List[Tuple[int, str]]) -> str:
+def format_bruteforce_records(
+    ciphertext: str,
+    variants: List[Tuple[Any, str]],
+    title: str = "РЕЗУЛЬТАТЫ ПОЛНОГО ПЕРЕБОРА КЛЮЧЕЙ",
+    key_label: str = "Ключ k"
+) -> str:
+    """Форматирование таблицы перебора ключей для сохранения в файл."""
     lines = [
-        "=== РЕЗУЛЬТАТЫ ПОЛНОГО ПЕРЕБОРА КЛЮЧЕЙ ДЛЯ ШИФР-ТЕКСТА ===",
-        f"Исходный ШТ: {ciphertext}n",
-        f"{'Ключ k':<8} | {'Расшифрованный текст'}",
+        f"=== {title} ===",
+        f"Исходный ШТ: {ciphertext}\n",
+        f"{key_label:<8} | {'Расшифрованный текст'}",
         "-" * 80
     ]
     for k, dec_text in variants:
-        lines.append(f"k = {k:<4} | {dec_text}")
-    return "n".join(lines) + "n"
+        lines.append(f"k = {str(k):<4} | {dec_text}")
+    return "\n".join(lines) + "\n"
 
 
-# База данных вариантов 1..30
-VARIANTS_DB = { ... }
+# Псевдоним для обратной совместимости
+save_result_to_file = save_text_file
 ```
 
-### Модуль main.py
+### Модуль консольного интерфейса `main.py`
 
 ```python
 """
@@ -284,8 +321,11 @@ import os
 import sys
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-if CURRENT_DIR not in sys.path:
-    sys.path.insert(0, CURRENT_DIR)
+PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+
+for path in (PROJECT_ROOT, CURRENT_DIR):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     try:
@@ -299,6 +339,11 @@ if sys.stdin.encoding and sys.stdin.encoding.lower() != "utf-8":
         pass
 
 import caesar_cipher as cc
+from common.io_utils import save_text_file, format_encryption_record, format_bruteforce_records
+from variants import VARIANTS_DB
+
+OUTPUTS_DIR = os.path.join(CURRENT_DIR, "outputs")
+os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
 
 def print_banner() -> None:
@@ -325,7 +370,7 @@ def prompt_key(prompt_text: str = "Введите ключ k (1..31): ") -> int:
 
 
 def handle_encrypt() -> None:
-    print("n--- 1. ШИФРОВАНИЕ ТЕКСТА ---")
+    print("\n--- 1. ШИФРОВАНИЕ ТЕКСТА ---")
     raw_text = input("Введите исходный текст: ").strip()
     if not raw_text:
         print(">> Текст пуст.")
@@ -340,20 +385,20 @@ def handle_encrypt() -> None:
     key = prompt_key()
     ciphertext = cc.encrypt(raw_text, key, filter_non_alpha=filter_alpha)
 
-    print(f"nИсходный текст: {raw_text}")
+    print(f"\nИсходный текст: {raw_text}")
     print(f"Ключ k:         {key}")
     print(f"Шифр-текст:     {ciphertext}")
 
-    default_file = os.path.join(CURRENT_DIR, "encrypted.txt")
+    default_file = os.path.join(OUTPUTS_DIR, "encrypted.txt")
     save_file = input(f"Файл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
 
-    record = cc.format_encryption_record(raw_text, ciphertext, key, is_decryption=False)
-    cc.save_result_to_file(save_file, record)
+    record = format_encryption_record(raw_text, ciphertext, key, is_decryption=False)
+    save_text_file(save_file, record)
     print(f">> Сохранено в: {save_file}")
 
 
 def handle_decrypt() -> None:
-    print("n--- 2. РАСШИФРОВАНИЕ ТЕКСТА С ЗАДАННЫМ КЛЮЧОМ ---")
+    print("\n--- 2. РАСШИФРОВАНИЕ ТЕКСТА С ЗАДАННЫМ КЛЮЧОМ ---")
     ciphertext = input("Введите шифр-текст: ").strip()
     if not ciphertext:
         print(">> Текст пуст.")
@@ -362,20 +407,20 @@ def handle_decrypt() -> None:
     key = prompt_key("Введите ключ k (1..31): ")
     plaintext = cc.decrypt(ciphertext, key)
 
-    print(f"nШифр-текст:         {ciphertext}")
+    print(f"\nШифр-текст:         {ciphertext}")
     print(f"Ключ k:             {key}")
     print(f"Расшифрованный текст: {plaintext}")
 
-    default_file = os.path.join(CURRENT_DIR, "decrypted.txt")
+    default_file = os.path.join(OUTPUTS_DIR, "decrypted.txt")
     save_file = input(f"Файл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
 
-    record = cc.format_encryption_record(ciphertext, plaintext, key, is_decryption=True)
-    cc.save_result_to_file(save_file, record)
+    record = format_encryption_record(ciphertext, plaintext, key, is_decryption=True)
+    save_text_file(save_file, record)
     print(f">> Сохранено в: {save_file}")
 
 
 def handle_bruteforce() -> None:
-    print("n--- 3. ПОЛНЫЙ ПЕРЕБОР КЛЮЧЕЙ (ВЗЛОМ) ---")
+    print("\n--- 3. ПОЛНЫЙ ПЕРЕБОР КЛЮЧЕЙ (ВЗЛОМ) ---")
     ciphertext = input("Введите шифр-текст: ").strip()
     if not ciphertext:
         print(">> Текст пуст.")
@@ -383,22 +428,22 @@ def handle_bruteforce() -> None:
 
     variants = cc.brute_force(ciphertext)
 
-    print("nТаблица перебора (k = 1..31):")
+    print("\nТаблица перебора (k = 1..31):")
     print(f"{'Ключ k':<8} | {'Расшифрованный текст'}")
     print("-" * 75)
     for k, dec_text in variants:
         print(f"k = {k:<4} | {dec_text}")
 
-    default_file = os.path.join(CURRENT_DIR, "bruteforce_variants.txt")
-    save_file = input(f"nФайл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
+    default_file = os.path.join(OUTPUTS_DIR, "bruteforce_variants.txt")
+    save_file = input(f"\nФайл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
 
-    content = cc.format_bruteforce_records(ciphertext, variants)
-    cc.save_result_to_file(save_file, content)
+    content = format_bruteforce_records(ciphertext, variants)
+    save_text_file(save_file, content)
     print(f">> Таблица сохранена в: {save_file}")
 
 
 def handle_variant_task() -> None:
-    print("n--- 4. ВЫПОЛНЕНИЕ ЗАДАНИЯ ПО ВАРИАНТУ (П. 2.3) ---")
+    print("\n--- 4. ВЫПОЛНЕНИЕ ЗАДАНИЯ ПО ВАРИАНТУ (П. 2.3) ---")
     print("1 - Вариант № 1 (Смирнов Н. М., ФИТ-242)")
     print("2 - Другой вариант из методички (1–30)")
     print("3 - Произвольный шифр-текст")
@@ -424,7 +469,7 @@ def handle_variant_task() -> None:
             return
 
     if custom_ct is None:
-        var_data = cc.VARIANTS_DB[var_num]
+        var_data = VARIANTS_DB[var_num]
         ciphertext = var_data["ciphertext"]
         expected_key = var_data["key"]
         expected_pt = var_data["plaintext"]
@@ -437,7 +482,7 @@ def handle_variant_task() -> None:
         expected_key = None
 
     variants = cc.brute_force(ciphertext)
-    print("nРезультаты перебора ключей:")
+    print("\nРезультаты перебора ключей:")
     for k, dec_text in variants:
         marker = " <=== ИСТИННЫЙ ТЕКСТ" if (expected_key and k == expected_key) else ""
         print(f"k = {k:2d}: {dec_text[:65]}...{marker}")
@@ -446,14 +491,14 @@ def handle_variant_task() -> None:
         key = expected_key
         plaintext = expected_pt
     else:
-        key = prompt_key("nУкажите истинный ключ k по результатам: ")
+        key = prompt_key("\nУкажите истинный ключ k по результатам: ")
         plaintext = cc.decrypt(ciphertext, key)
         author = input("Автор произведения: ").strip()
         work = input("Название произведения: ").strip()
         author_work_ot = cc.prepare_canonical_text(f"{author}{work}")
         author_work_st = cc.encrypt(author_work_ot, key)
 
-    print("n" + "=" * 70)
+    print("\n" + "=" * 70)
     print("ИТОГОВЫЙ РЕЗУЛЬТАТ:")
     print(f"ШИФР-ТЕКСТ (ШТ):                       {ciphertext}")
     print(f"РАСШИФРОВАННЫЙ ТЕКСТ (ОТ):             {plaintext}")
@@ -463,29 +508,29 @@ def handle_variant_task() -> None:
     print(f"ЗАШИФРОВАННЫЕ ФАМИЛИЯ И НАЗВАНИЕ (ШТ): {author_work_st}")
     print("=" * 70)
 
-    res_file = os.path.join(CURRENT_DIR, f"variant_{var_num}_solution.txt")
+    res_file = os.path.join(OUTPUTS_DIR, f"variant_{var_num}_solution.txt")
     out_lines = [
         f"ОТЧЕТНЫЙ РЕЗУЛЬТАТ ПО ВАРИАНТУ № {var_num}",
-        f"Студент: Смирнов Н. М., группа ФИТ-242n",
+        f"Студент: Смирнов Н. М., группа ФИТ-242\n",
         f"ШИФР-ТЕКСТ (ШТ): {ciphertext}",
         f"РАСШИФРОВАННЫЙ ТЕКСТ (ОТ): {plaintext}",
         f"КЛЮЧ: {key}",
         f"АВТОР И ПРОИЗВЕДЕНИЕ: {author}, «{work}»",
         f"АВТОР И ПРОИЗВЕДЕНИЕ (ОТ): {author_work_ot}",
-        f"ЗАШИФРОВАННЫЕ ФАМИЛИЯ И НАЗВАНИЕ (ШТ): {author_work_st}n",
+        f"ЗАШИФРОВАННЫЕ ФАМИЛИЯ И НАЗВАНИЕ (ШТ): {author_work_st}\n",
         "Таблица перебора ключей:",
     ]
     for k, dec_text in variants:
         out_lines.append(f"k = {k:2d}: {dec_text}")
 
-    cc.save_result_to_file(res_file, "n".join(out_lines) + "n")
+    save_text_file(res_file, "\n".join(out_lines) + "\n")
     print(f">> Результат сохранен в: {res_file}")
 
 
 def main() -> None:
     print_banner()
     while True:
-        print("nГЛАВНОЕ МЕНЮ:")
+        print("\nГЛАВНОЕ МЕНЮ:")
         print("1. Зашифровать текст (п. 2.1)")
         print("2. Расшифровать текст с известным ключом (п. 2.2)")
         print("3. Расшифровать текст полным перебором всех 31 ключей (п. 2.2)")

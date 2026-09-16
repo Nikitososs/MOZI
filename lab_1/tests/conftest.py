@@ -3,7 +3,8 @@
 """
 
 import pytest
-from lab_1.caesar_cipher import VARIANTS_DB, ALPHABET_POWER, ALPHABET_SYMBOLS
+from lab_1.caesar_cipher import ALPHABET_POWER, ALPHABET_SYMBOLS
+from lab_1.variants import VARIANTS_DB
 
 
 @pytest.fixture

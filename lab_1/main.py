@@ -7,10 +7,11 @@ import os
 import sys
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUTS_DIR = os.path.join(CURRENT_DIR, "outputs")
-os.makedirs(OUTPUTS_DIR, exist_ok=True)
-if CURRENT_DIR not in sys.path:
-    sys.path.insert(0, CURRENT_DIR)
+PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+
+for path in (PROJECT_ROOT, CURRENT_DIR):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     try:
@@ -24,6 +25,11 @@ if sys.stdin.encoding and sys.stdin.encoding.lower() != "utf-8":
         pass
 
 import caesar_cipher as cc
+from common.io_utils import save_text_file, format_encryption_record, format_bruteforce_records
+from variants import VARIANTS_DB
+
+OUTPUTS_DIR = os.path.join(CURRENT_DIR, "outputs")
+os.makedirs(OUTPUTS_DIR, exist_ok=True)
 
 
 def print_banner() -> None:
@@ -72,8 +78,8 @@ def handle_encrypt() -> None:
     default_file = os.path.join(OUTPUTS_DIR, "encrypted.txt")
     save_file = input(f"Файл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
 
-    record = cc.format_encryption_record(raw_text, ciphertext, key, is_decryption=False)
-    cc.save_result_to_file(save_file, record)
+    record = format_encryption_record(raw_text, ciphertext, key, is_decryption=False)
+    save_text_file(save_file, record)
     print(f">> Сохранено в: {save_file}")
 
 
@@ -94,8 +100,8 @@ def handle_decrypt() -> None:
     default_file = os.path.join(OUTPUTS_DIR, "decrypted.txt")
     save_file = input(f"Файл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
 
-    record = cc.format_encryption_record(ciphertext, plaintext, key, is_decryption=True)
-    cc.save_result_to_file(save_file, record)
+    record = format_encryption_record(ciphertext, plaintext, key, is_decryption=True)
+    save_text_file(save_file, record)
     print(f">> Сохранено в: {save_file}")
 
 
@@ -117,8 +123,8 @@ def handle_bruteforce() -> None:
     default_file = os.path.join(OUTPUTS_DIR, "bruteforce_variants.txt")
     save_file = input(f"\nФайл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
 
-    content = cc.format_bruteforce_records(ciphertext, variants)
-    cc.save_result_to_file(save_file, content)
+    content = format_bruteforce_records(ciphertext, variants)
+    save_text_file(save_file, content)
     print(f">> Таблица сохранена в: {save_file}")
 
 
@@ -149,7 +155,7 @@ def handle_variant_task() -> None:
             return
 
     if custom_ct is None:
-        var_data = cc.VARIANTS_DB[var_num]
+        var_data = VARIANTS_DB[var_num]
         ciphertext = var_data["ciphertext"]
         expected_key = var_data["key"]
         expected_pt = var_data["plaintext"]
@@ -203,7 +209,7 @@ def handle_variant_task() -> None:
     for k, dec_text in variants:
         out_lines.append(f"k = {k:2d}: {dec_text}")
 
-    cc.save_result_to_file(res_file, "\n".join(out_lines) + "\n")
+    save_text_file(res_file, "\n".join(out_lines) + "\n")
     print(f">> Результат сохранен в: {res_file}")
 
 
