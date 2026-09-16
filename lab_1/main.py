@@ -58,54 +58,69 @@ def prompt_text_source_with_key(
     prompt_label: str,
     record_hint: str = "",
     default_filepath: str = ""
-) -> Tuple[str, Optional[int]]:
+) -> Tuple[Optional[str], Optional[int]]:
     print(f"\nСпособ ввода ({prompt_label}):")
     print("1 - Ввести вручную с клавиатуры")
     print("2 - Прочитать из файла")
-    src_choice = input("Выбор (1/2, по умолчанию 1): ").strip()
+    print("0 - Отмена (вернуться в главное меню)")
+    src_choice = input("Выбор (1/2/0, по умолчанию 1): ").strip()
+    if src_choice == "0":
+        print(">> Действие отменено.")
+        return None, None
     if src_choice == "2":
         hint = f" [по умолчанию: {default_filepath}]" if default_filepath else ""
-        filepath = input(f"Путь к файлу{hint}: ").strip() or default_filepath
+        filepath = input(f"Путь к файлу{hint} (0 для отмены): ").strip()
+        if filepath == "0":
+            print(">> Действие отменено.")
+            return None, None
+        filepath = filepath or default_filepath
         if not filepath:
             print(">> Ошибка: путь не может быть пустым.")
-            return "", None
+            return None, None
         if not os.path.isfile(filepath):
             print(f">> Ошибка: файл '{filepath}' не найден.")
-            return "", None
+            return None, None
         try:
             raw_content = read_text_file(filepath)
             content = load_text_from_file_or_record(filepath, record_hint)
             key = extract_key_from_text(raw_content)
             if not content:
                 print(">> Ошибка: файл пуст.")
-                return "", None
+                return None, None
             preview = content if len(content) <= 60 else content[:57] + "..."
             key_info = f", обнаружен ключ k={key}" if key is not None else ""
             print(f">> Успешно прочитано ({len(content)} симв.{key_info}): {preview}")
             return content, key
         except Exception as e:
             print(f">> Ошибка при чтении файла: {e}")
-            return "", None
+            return None, None
     else:
-        text = input(f"Введите {prompt_label}: ")
+        text = input(f"Введите {prompt_label} (0 для отмены): ")
+        if text.strip() == "0":
+            print(">> Действие отменено.")
+            return None, None
         if not text.strip():
             print(">> Ошибка: введен пустой текст.")
-            return "", None
+            return None, None
         return text.rstrip("\r\n"), None
 
 
-def prompt_text_source(prompt_label: str, record_hint: str = "", default_filepath: str = "") -> str:
+def prompt_text_source(prompt_label: str, record_hint: str = "", default_filepath: str = "") -> Optional[str]:
     text, _ = prompt_text_source_with_key(prompt_label, record_hint, default_filepath=default_filepath)
     return text
 
 
-def prompt_case_mode(is_encryption: bool = True) -> Tuple[str, bool]:
+def prompt_case_mode(is_encryption: bool = True) -> Optional[Tuple[str, bool]]:
     op_label = "шифрования" if is_encryption else "расшифрования"
     print(f"\nРежим обработки регистра и символов ({op_label}):")
     print("1 - Оставить как есть (сохранять регистр букв; сторонние символы не трогать)")
     print("2 - Привести к одному регистру (к нижнему регистру; сторонние символы не трогать)")
     print("3 - Канонический вид (только буквы алфавита в нижнем регистре, удалить пробелы и знаки)")
-    choice = input("Выбор (1/2/3, по умолчанию 1): ").strip()
+    print("0 - Отмена (вернуться в главное меню)")
+    choice = input("Выбор (1/2/3/0, по умолчанию 1): ").strip()
+    if choice == "0":
+        print(">> Действие отменено.")
+        return None
     if choice == "2":
         return "lower", False
     elif choice == "3":
@@ -153,15 +168,15 @@ def inspect_and_prepare_text(
     return clean_text
 
 
-def prompt_key(alpha: cc.Alphabet, prompt_text: str = "", default_key: Optional[int] = None) -> int:
+def prompt_key(alpha: cc.Alphabet, prompt_text: str = "", default_key: Optional[int] = None) -> Optional[int]:
     m = alpha.power
     max_k = m - 1
     if not prompt_text:
         if default_key is not None:
             default_eff = default_key % m
-            prompt_text = f"Введите ключ k (1..{max_k}, Enter для {default_eff}): "
+            prompt_text = f"Введите ключ k (1..{max_k}, 0 для отмены, Enter для {default_eff}): "
         else:
-            prompt_text = f"Введите ключ k (1..{max_k}): "
+            prompt_text = f"Введите ключ k (1..{max_k}, 0 для отмены): "
     while True:
         try:
             val = input(prompt_text).strip()
@@ -173,6 +188,10 @@ def prompt_key(alpha: cc.Alphabet, prompt_text: str = "", default_key: Optional[
                     continue
             else:
                 k = int(val)
+
+            if k == 0:
+                print(">> Действие отменено.")
+                return None
 
             k_eff = k % m
 
@@ -206,13 +225,19 @@ def handle_encrypt() -> None:
     if not raw_text:
         return
 
-    case_mode, filter_alpha = prompt_case_mode(is_encryption=True)
+    mode_res = prompt_case_mode(is_encryption=True)
+    if mode_res is None:
+        return
+    case_mode, filter_alpha = mode_res
 
     prepared_text = inspect_and_prepare_text(raw_text, current_alphabet, filter_alpha=filter_alpha)
     if prepared_text is None:
         return
 
     key = prompt_key(current_alphabet)
+    if key is None:
+        return
+
     ciphertext = cc.encrypt(
         prepared_text,
         key,
@@ -227,11 +252,14 @@ def handle_encrypt() -> None:
     print(f"Шифр-текст:     {ciphertext}")
 
     default_file = os.path.join(OUTPUTS_DIR, "encrypted.txt")
-    save_file = input(f"Файл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
-
-    record = format_encryption_record(prepared_text, ciphertext, key, is_decryption=False)
-    save_text_file(save_file, record)
-    print(f">> Сохранено в: {save_file}")
+    save_file = input(f"\nФайл для сохранения [по умолчанию: {default_file}, 0 - не сохранять]: ").strip()
+    if save_file == "0":
+        print(">> Сохранение отменено.")
+    else:
+        save_file = save_file or default_file
+        record = format_encryption_record(prepared_text, ciphertext, key, is_decryption=False)
+        save_text_file(save_file, record)
+        print(f">> Сохранено в: {save_file}")
 
 
 def handle_decrypt() -> None:
@@ -245,7 +273,10 @@ def handle_decrypt() -> None:
     if not ciphertext:
         return
 
-    case_mode, filter_alpha = prompt_case_mode(is_encryption=False)
+    mode_res = prompt_case_mode(is_encryption=False)
+    if mode_res is None:
+        return
+    case_mode, filter_alpha = mode_res
 
     prepared_ct = inspect_and_prepare_text(ciphertext, current_alphabet, filter_alpha=filter_alpha)
     if prepared_ct is None:
@@ -255,6 +286,8 @@ def handle_decrypt() -> None:
         key = prompt_key(current_alphabet, default_key=file_key)
     else:
         key = prompt_key(current_alphabet)
+    if key is None:
+        return
 
     plaintext = cc.decrypt(prepared_ct, key, alphabet=current_alphabet, case_mode=case_mode)
 
@@ -264,11 +297,14 @@ def handle_decrypt() -> None:
     print(f"Расшифрованный текст: {plaintext}")
 
     default_file = os.path.join(OUTPUTS_DIR, "decrypted.txt")
-    save_file = input(f"Файл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
-
-    record = format_encryption_record(prepared_ct, plaintext, key, is_decryption=True)
-    save_text_file(save_file, record)
-    print(f">> Сохранено в: {save_file}")
+    save_file = input(f"\nФайл для сохранения [по умолчанию: {default_file}, 0 - не сохранять]: ").strip()
+    if save_file == "0":
+        print(">> Сохранение отменено.")
+    else:
+        save_file = save_file or default_file
+        record = format_encryption_record(prepared_ct, plaintext, key, is_decryption=True)
+        save_text_file(save_file, record)
+        print(f">> Сохранено в: {save_file}")
 
 
 def handle_bruteforce() -> None:
@@ -282,7 +318,10 @@ def handle_bruteforce() -> None:
     if not ciphertext:
         return
 
-    case_mode, filter_alpha = prompt_case_mode(is_encryption=False)
+    mode_res = prompt_case_mode(is_encryption=False)
+    if mode_res is None:
+        return
+    case_mode, filter_alpha = mode_res
 
     prepared_ct = inspect_and_prepare_text(ciphertext, current_alphabet, filter_alpha=filter_alpha)
     if prepared_ct is None:
@@ -297,11 +336,14 @@ def handle_bruteforce() -> None:
         print(f"k = {k:<4} | {dec_text}")
 
     default_file = os.path.join(OUTPUTS_DIR, "bruteforce_variants.txt")
-    save_file = input(f"\nФайл для сохранения [по умолчанию: {default_file}]: ").strip() or default_file
-
-    content = format_bruteforce_records(prepared_ct, variants)
-    save_text_file(save_file, content)
-    print(f">> Таблица сохранена в: {save_file}")
+    save_file = input(f"\nФайл для сохранения [по умолчанию: {default_file}, 0 - не сохранять]: ").strip()
+    if save_file == "0":
+        print(">> Сохранение отменено.")
+    else:
+        save_file = save_file or default_file
+        content = format_bruteforce_records(prepared_ct, variants)
+        save_text_file(save_file, content)
+        print(f">> Таблица сохранена в: {save_file}")
 
 
 def handle_variant_task() -> None:
@@ -310,7 +352,12 @@ def handle_variant_task() -> None:
     print("2 - Другой вариант из базы (1–30)")
     print("3 - Прочитать шифр-текст из файла")
     print("4 - Ввести произвольный шифр-текст с клавиатуры")
-    choice = input("Выбор [по умолчанию 1]: ").strip()
+    print("0 - Отмена (вернуться в главное меню)")
+    choice = input("Выбор (1-4/0, по умолчанию 1): ").strip()
+
+    if choice == "0":
+        print(">> Действие отменено.")
+        return
 
     var_num = 1
     custom_ct = None
@@ -318,8 +365,12 @@ def handle_variant_task() -> None:
 
     if choice == "2":
         while True:
+            val_input = input("Номер варианта (1–30, 0 для отмены): ").strip()
+            if val_input == "0":
+                print(">> Действие отменено.")
+                return
             try:
-                v = int(input("Номер варианта (1–30): ").strip())
+                v = int(val_input)
                 if 1 <= v <= 30:
                     var_num = v
                     break
@@ -328,7 +379,11 @@ def handle_variant_task() -> None:
                 print(">> Введите целое число.")
     elif choice == "3":
         hint = f" [по умолчанию: {default_src}]" if os.path.isfile(default_src) else ""
-        filepath = input(f"Путь к файлу с шифр-текстом{hint}: ").strip() or (default_src if os.path.isfile(default_src) else "")
+        filepath = input(f"Путь к файлу с шифр-текстом{hint} (0 для отмены): ").strip()
+        if filepath == "0":
+            print(">> Действие отменено.")
+            return
+        filepath = filepath or (default_src if os.path.isfile(default_src) else "")
         if not filepath:
             print(">> Ошибка: путь не может быть пустым.")
             return
@@ -349,7 +404,10 @@ def handle_variant_task() -> None:
             print(f">> Ошибка при чтении файла: {e}")
             return
     elif choice == "4":
-        text = input("Введите шифр-текст: ")
+        text = input("Введите шифр-текст (0 для отмены): ")
+        if text.strip() == "0":
+            print(">> Действие отменено.")
+            return
         if not text.strip():
             print(">> Ошибка: введен пустой текст.")
             return
@@ -384,9 +442,17 @@ def handle_variant_task() -> None:
         plaintext = expected_pt
     else:
         key = prompt_key(ru_alpha, "\nУкажите истинный ключ k по результатам: ")
+        if key is None:
+            return
         plaintext = cc.decrypt(ciphertext, key, alphabet=ru_alpha)
-        author = input("Автор произведения: ").strip()
-        work = input("Название произведения: ").strip()
+        author = input("Автор произведения (0 для отмены): ").strip()
+        if author == "0":
+            print(">> Действие отменено.")
+            return
+        work = input("Название произведения (0 для отмены): ").strip()
+        if work == "0":
+            print(">> Действие отменено.")
+            return
         author_work_ot = ru_alpha.prepare_canonical_text(f"{author}{work}")
         author_work_st = ru_alpha.encrypt(author_work_ot, key)
 
@@ -402,33 +468,40 @@ def handle_variant_task() -> None:
 
     default_name = f"variant_{var_num}_solution.txt" if custom_ct is None else "variant_custom_solution.txt"
     default_res_file = os.path.join(OUTPUTS_DIR, default_name)
-    save_file = input(f"\nФайл для сохранения отчета [по умолчанию: {default_res_file}]: ").strip() or default_res_file
+    save_file = input(f"\nФайл для сохранения отчета [по умолчанию: {default_res_file}, 0 - не сохранять]: ").strip()
+    if save_file == "0":
+        print(">> Сохранение отчета отменено.")
+    else:
+        save_file = save_file or default_res_file
+        var_title = f"ВАРИАНТУ № {var_num}" if custom_ct is None else "ПОЛЬЗОВАТЕЛЬСКОМУ ШИФР-ТЕКСТУ"
+        out_lines = [
+            f"ОТЧЕТНЫЙ РЕЗУЛЬТАТ ПО {var_title}",
+            f"Студент: Смирнов Н. М., группа ФИТ-242\n",
+            f"ШИФР-ТЕКСТ (ШТ): {ciphertext}",
+            f"РАСШИФРОВАННЫЙ ТЕКСТ (ОТ): {plaintext}",
+            f"КЛЮЧ: {key}",
+            f"АВТОР И ПРОИЗВЕДЕНИЕ: {author}, «{work}»",
+            f"АВТОР И ПРОИЗВЕДЕНИЕ (ОТ): {author_work_ot}",
+            f"ЗАШИФРОВАННЫЕ ФАМИЛИЯ И НАЗВАНИЕ (ШТ): {author_work_st}\n",
+            "Таблица перебора ключей:",
+        ]
+        for k, dec_text in variants:
+            out_lines.append(f"k = {k:2d}: {dec_text}")
 
-    var_title = f"ВАРИАНТУ № {var_num}" if custom_ct is None else "ПОЛЬЗОВАТЕЛЬСКОМУ ШИФР-ТЕКСТУ"
-    out_lines = [
-        f"ОТЧЕТНЫЙ РЕЗУЛЬТАТ ПО {var_title}",
-        f"Студент: Смирнов Н. М., группа ФИТ-242\n",
-        f"ШИФР-ТЕКСТ (ШТ): {ciphertext}",
-        f"РАСШИФРОВАННЫЙ ТЕКСТ (ОТ): {plaintext}",
-        f"КЛЮЧ: {key}",
-        f"АВТОР И ПРОИЗВЕДЕНИЕ: {author}, «{work}»",
-        f"АВТОР И ПРОИЗВЕДЕНИЕ (ОТ): {author_work_ot}",
-        f"ЗАШИФРОВАННЫЕ ФАМИЛИЯ И НАЗВАНИЕ (ШТ): {author_work_st}\n",
-        "Таблица перебора ключей:",
-    ]
-    for k, dec_text in variants:
-        out_lines.append(f"k = {k:2d}: {dec_text}")
-
-    save_text_file(save_file, "\n".join(out_lines) + "\n")
-    print(f">> Результат сохранен в: {save_file}")
+        save_text_file(save_file, "\n".join(out_lines) + "\n")
+        print(f">> Результат сохранен в: {save_file}")
 
     save_cipher = input("Сохранить зашифрованную строку (автор/произведение) в отдельный файл? (y/n, по умолчанию n): ").strip().lower()
     if save_cipher in ("y", "yes", "да"):
         default_cipher_file = os.path.join(OUTPUTS_DIR, f"variant_{var_num}_cipher.txt" if custom_ct is None else "variant_custom_cipher.txt")
-        save_cf = input(f"Файл для сохранения шифровки [по умолчанию: {default_cipher_file}]: ").strip() or default_cipher_file
-        cipher_rec = format_encryption_record(author_work_ot, author_work_st, key, is_decryption=False)
-        save_text_file(save_cf, cipher_rec)
-        print(f">> Шифр-текст сохранен в: {save_cf}")
+        save_cf = input(f"Файл для сохранения шифровки [по умолчанию: {default_cipher_file}, 0 - отмена]: ").strip()
+        if save_cf == "0":
+            print(">> Сохранение шифровки отменено.")
+        else:
+            save_cf = save_cf or default_cipher_file
+            cipher_rec = format_encryption_record(author_work_ot, author_work_st, key, is_decryption=False)
+            save_text_file(save_cf, cipher_rec)
+            print(f">> Шифр-текст сохранен в: {save_cf}")
 
 
 def handle_change_alphabet() -> None:
@@ -441,8 +514,12 @@ def handle_change_alphabet() -> None:
         active_mark = " (активен)" if alpha == current_alphabet else ""
         print(f"{idx} - [{code}] {alpha.name}{active_mark}")
     print(f"{len(presets_list) + 1} - Добавить собственный алфавит")
+    print("0 - Отмена (вернуться в главное меню)")
 
-    choice = input("\nВыберите вариант: ").strip()
+    choice = input("\nВыберите вариант (0 для отмены): ").strip()
+    if choice == "0":
+        print(">> Действие отменено.")
+        return
     try:
         choice_idx = int(choice)
         if 1 <= choice_idx <= len(presets_list):
@@ -451,9 +528,21 @@ def handle_change_alphabet() -> None:
             print(f">> Активный алфавит переключен на: {current_alphabet.name}")
             return
         elif choice_idx == len(presets_list) + 1:
-            name = input("Название алфавита (например, Digits): ").strip()
-            code = input("Краткий код (например, digits): ").strip().lower()
-            symbols = input("Символы алфавита без пробелов (например, 0123456789): ").strip()
+            name = input("Название алфавита (0 для отмены): ").strip()
+            if name == "0":
+                print(">> Действие отменено.")
+                return
+            if not name:
+                print(">> Ошибка: название не может быть пустым.")
+                return
+            code = input("Краткий код (например, digits, 0 для отмены): ").strip().lower()
+            if code == "0":
+                print(">> Действие отменено.")
+                return
+            symbols = input("Символы алфавита без пробелов (0 для отмены): ").strip()
+            if symbols == "0":
+                print(">> Действие отменено.")
+                return
             if not symbols:
                 print(">> Ошибка: символы не могут быть пустыми.")
                 return
