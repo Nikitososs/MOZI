@@ -145,21 +145,9 @@ $$N = 32 - 1 = 31text{ вариант}.$$
 
 ## 4. Код программы
 
-Программа построена по принципам модульности и разделения ответственности (Single Responsibility Principle):
-- `caesar_cipher.py` — чистое криптографическое ядро шифра Цезаря (только математика и функции алфавита);
-- `common/io_utils.py` — универсальный переиспользуемый модуль файлового ввода-вывода и форматирования отчетов (общий для всех лабораторных работ проекта);
-- `variants.py` — каталог исходных данных и шифр-текстов 30 вариантов лабораторной работы;
-- `main.py` — консольный пользовательский интерфейс.
-
 ### Модуль чистого криптографического ядра `caesar_cipher.py`
 
 ```python
-"""
-Модуль криптографического ядра: Шифр Цезаря.
-Дисциплина: МОЗИ, Лабораторная работа № 1.
-Содержит исключительно математические функции преобразования алфавита и алгоритм шифрования.
-"""
-
 from typing import Dict, List, Tuple
 
 ALPHABET_SYMBOLS: str = "абвгдежзийклмнопрстуфхцчшщъыьэюя"
@@ -170,13 +158,11 @@ CODE_TO_CHAR: Dict[int, str] = {idx: char for idx, char in enumerate(ALPHABET_SY
 
 
 def normalize_char(char: str) -> str:
-    """Приведение символа к нижнему регистру с отождествлением 'ё' -> 'е'."""
     c = char.lower()
     return "е" if c == "ё" else c
 
 
 def A(char: str) -> int:
-    """Отображение символа алфавита в числовой код: A(b_i) = x_i in [0; m-1]."""
     norm = normalize_char(char)
     if norm in CHAR_TO_CODE:
         return CHAR_TO_CODE[norm]
@@ -184,22 +170,18 @@ def A(char: str) -> int:
 
 
 def A_inv(code: int) -> str:
-    """Обратное отображение кода в символ: A^(-1)(y_i) = c_i."""
     return CODE_TO_CHAR[code % ALPHABET_POWER]
 
 
 def E_k(x: int, k: int) -> int:
-    """Прямое линейное преобразование: y_i = (x_i + k) mod m."""
     return (x + k) % ALPHABET_POWER
 
 
 def D_k(y: int, k: int) -> int:
-    """Обратное линейное преобразование: x_i = (y_i - k) mod m."""
     return (y - k) % ALPHABET_POWER
 
 
 def encrypt_symbol(char: str, k: int) -> str:
-    """Шифрование одного символа через композицию функций: c = A^(-1)(E_k(A(b)))."""
     norm = normalize_char(char)
     if norm in CHAR_TO_CODE:
         return A_inv(E_k(A(norm), k))
@@ -207,7 +189,6 @@ def encrypt_symbol(char: str, k: int) -> str:
 
 
 def decrypt_symbol(char: str, k: int) -> str:
-    """Расшифрование одного символа через композицию функций: b = A^(-1)(D_k(A(c)))."""
     norm = normalize_char(char)
     if norm in CHAR_TO_CODE:
         return A_inv(D_k(A(norm), k))
@@ -215,7 +196,6 @@ def decrypt_symbol(char: str, k: int) -> str:
 
 
 def prepare_canonical_text(text: str) -> str:
-    """Приведение текста к каноническому виду (нижний регистр, без пробелов и знаков)."""
     result = []
     for ch in text:
         norm = normalize_char(ch)
@@ -225,36 +205,27 @@ def prepare_canonical_text(text: str) -> str:
 
 
 def encrypt(text: str, k: int, filter_non_alpha: bool = False) -> str:
-    """Посимвольное шифрование текста шифром Цезаря с ключом k."""
     if filter_non_alpha:
         text = prepare_canonical_text(text)
     return "".join(encrypt_symbol(ch, k) for ch in text)
 
 
 def decrypt(text: str, k: int) -> str:
-    """Посимвольное расшифрование текста шифром Цезаря с ключом k."""
     return "".join(decrypt_symbol(ch, k) for ch in text)
 
 
 def brute_force(ciphertext: str) -> List[Tuple[int, str]]:
-    """Полный перебор всех 31 возможных ключей."""
     return [(k, decrypt(ciphertext, k)) for k in range(1, ALPHABET_POWER)]
 ```
 
 ### Переиспользуемый модуль ввода-вывода `common/io_utils.py`
 
 ```python
-"""
-Вспомогательный модуль для файловых операций и форматирования результатов.
-Переиспользуется во всех лабораторных работах проекта МОЗИ.
-"""
-
 from typing import Any, List, Tuple
 import os
 
 
 def save_text_file(filepath: str, content: str) -> None:
-    """Сохранение текстовых данных в файл в кодировке UTF-8."""
     directory = os.path.dirname(filepath)
     if directory and not os.path.exists(directory):
         os.makedirs(directory, exist_ok=True)
@@ -263,7 +234,6 @@ def save_text_file(filepath: str, content: str) -> None:
 
 
 def read_text_file(filepath: str) -> str:
-    """Чтение текстовых данных из файла в кодировке UTF-8."""
     with open(filepath, "r", encoding="utf-8") as f:
         return f.read()
 
@@ -275,7 +245,6 @@ def format_encryption_record(
     cipher_name: str = "ШИФР ЦЕЗАРЯ",
     is_decryption: bool = False
 ) -> str:
-    """Форматирование записи шифрования/расшифрования для сохранения в файл."""
     op_name = "РАСШИФРОВАНИЕ" if is_decryption else "ШИФРОВАНИЕ"
     input_label = "ШИФР-ТЕКСТ (ШТ)" if is_decryption else "ОТКРЫТЫЙ ТЕКСТ (ОТ)"
     output_label = "РАСШИФРОВАННЫЙ ТЕКСТ (ОТ)" if is_decryption else "ЗАШИФРОВАННЫЙ ТЕКСТ (ШТ)"
@@ -293,7 +262,6 @@ def format_bruteforce_records(
     title: str = "РЕЗУЛЬТАТЫ ПОЛНОГО ПЕРЕБОРА КЛЮЧЕЙ",
     key_label: str = "Ключ k"
 ) -> str:
-    """Форматирование таблицы перебора ключей для сохранения в файл."""
     lines = [
         f"=== {title} ===",
         f"Исходный ШТ: {ciphertext}\n",
@@ -305,18 +273,12 @@ def format_bruteforce_records(
     return "\n".join(lines) + "\n"
 
 
-# Псевдоним для обратной совместимости
 save_result_to_file = save_text_file
 ```
 
 ### Модуль консольного интерфейса `main.py`
 
 ```python
-"""
-Консольное приложение для лабораторной работы № 1: Шифр Цезаря.
-Студент: Смирнов Никита Михайлович, ФИТ-242, Вариант 1.
-"""
-
 import os
 import sys
 
