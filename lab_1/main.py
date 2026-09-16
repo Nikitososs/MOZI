@@ -29,6 +29,15 @@ os.makedirs(OUTPUTS_DIR, exist_ok=True)
 current_alphabet: cc.Alphabet = cc.DEFAULT_ALPHABET
 
 
+def clear_screen() -> None:
+    if sys.stdout.isatty():
+        os.system("cls" if os.name == "nt" else "clear")
+
+
+def pause_and_return() -> None:
+    input("\nНажмите Enter, чтобы вернуться в меню...")
+
+
 def print_banner() -> None:
     print("=" * 70)
     print("  ОмГТУ | Кафедра ПМиФИ | Дисциплина: МОЗИ")
@@ -255,8 +264,9 @@ def handle_change_alphabet() -> None:
 
 
 def main() -> None:
-    print_banner()
     while True:
+        clear_screen()
+        print_banner()
         print(f"\nГЛАВНОЕ МЕНЮ [{current_alphabet.name}]:")
         print("1. Зашифровать текст")
         print("2. Расшифровать текст по ключу")
@@ -267,20 +277,36 @@ def main() -> None:
 
         choice = input("\nВыберите действие (0-5): ").strip()
         if choice == "1":
+            clear_screen()
+            print_banner()
             handle_encrypt()
+            pause_and_return()
         elif choice == "2":
+            clear_screen()
+            print_banner()
             handle_decrypt()
+            pause_and_return()
         elif choice == "3":
+            clear_screen()
+            print_banner()
             handle_bruteforce()
+            pause_and_return()
         elif choice == "4":
+            clear_screen()
+            print_banner()
             handle_variant_task()
+            pause_and_return()
         elif choice == "5":
+            clear_screen()
+            print_banner()
             handle_change_alphabet()
+            pause_and_return()
         elif choice == "0":
             print("\nЗавершение работы программы.")
             break
         else:
             print(">> Некорректный выбор. Введите цифру от 0 до 5.")
+            pause_and_return()
 
 
 if __name__ == "__main__":
