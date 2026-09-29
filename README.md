@@ -124,17 +124,3 @@ python lab_2/main.py
 6. **Сменить алфавит** — переключение между русским и английским алфавитами.
 0. **Выход**.
 
----
-
-## Генерация отчетов DOCX (md2docx)
-
-Отчеты для обеих лабораторных работ подготовлены в формате академического Markdown и конвертируются в формат Word DOCX с автоматическим титульным листом ОмГТУ/ПМиФИ, кликабельным оглавлением, формулами, таблицами и листингами:
-
-```powershell
-# Генерация отчета по ЛР 1:
-python -m md2docx lab_1/report.md -c C:\projects\md-to-docx\configs\fit-academic.json -o lab_1/report.docx
-
-# Генерация отчета по ЛР 2:
-python -m md2docx lab_2/report.md -c C:\projects\md-to-docx\configs\fit-academic.json -o lab_2/report.docx
-```
-
