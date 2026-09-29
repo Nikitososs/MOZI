@@ -227,3 +227,7 @@ __marimo__/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Microsoft Word lock files
+~$*.doc*
+
