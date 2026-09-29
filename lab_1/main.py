@@ -51,7 +51,7 @@ def print_banner() -> None:
     print("=" * 70)
     print("  ОмГТУ | Кафедра ПМиФИ | Дисциплина: МОЗИ")
     print("  ЛАБОРАТОРНАЯ РАБОТА № 1: ШИФР ЦЕЗАРЯ")
-    print("  Студент: Смирнов Н. М. | Группа: ФИТ-242 | Вариант: 1")
+    print("  Студент: Смирнов Н. М. | Группа: ФИТ-242 | Вариант: 16")
     print("=" * 70)
 
 
@@ -356,7 +356,7 @@ def handle_bruteforce() -> None:
 def handle_variant_task() -> None:
     global last_used_key
     print("\n--- 4. ЗАДАНИЕ ПО ВАРИАНТУ ---")
-    print("1 - Вариант № 1 (Смирнов Н. М., ФИТ-242)")
+    print("1 - Вариант № 16 (Смирнов Н. М., ФИТ-242)")
     print("2 - Другой вариант из базы (1–30)")
     print("3 - Прочитать шифр-текст из файла")
     print("4 - Ввести произвольный шифр-текст с клавиатуры")
@@ -367,7 +367,7 @@ def handle_variant_task() -> None:
         print(">> Действие отменено.")
         return
 
-    var_num = 1
+    var_num = 16
     custom_ct = None
     default_src = os.path.join(OUTPUTS_DIR, "encrypted.txt")
 
