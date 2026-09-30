@@ -22,7 +22,9 @@ from lab_2.alphabet import (
     register_alphabet,
     get_alphabet,
     DEFAULT_ALPHABET,
-    RUSSIAN_FREQUENCIES
+    RUSSIAN_FREQUENCIES,
+    ENGLISH_FREQUENCIES,
+    get_reference_frequencies
 )
 
 from lab_2.cipher import (
@@ -36,6 +38,7 @@ from lab_2.cryptanalysis import (
     frequency_analysis,
     generate_hypotheses_systems,
     score_russian_text,
+    score_text,
     crack_affine_cipher
 )
 
@@ -52,6 +55,8 @@ __all__ = [
     "get_alphabet",
     "DEFAULT_ALPHABET",
     "RUSSIAN_FREQUENCIES",
+    "ENGLISH_FREQUENCIES",
+    "get_reference_frequencies",
     "AffineCipher",
     "encrypt",
     "decrypt",
@@ -59,5 +64,6 @@ __all__ = [
     "frequency_analysis",
     "generate_hypotheses_systems",
     "score_russian_text",
+    "score_text",
     "crack_affine_cipher",
 ]
