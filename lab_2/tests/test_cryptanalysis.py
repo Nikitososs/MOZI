@@ -97,3 +97,15 @@ class TestCryptanalysis:
         best_sc, best_k, _, _ = cracked[0]
         assert best_k == (key_a, key_b)
 
+    def test_generate_cryptanalysis_math_log(self, variant_16_data):
+        from lab_2.cryptanalysis import generate_cryptanalysis_math_log
+
+        ct = variant_16_data["ciphertext"]
+        log_content = generate_cryptanalysis_math_log(ct, top_ct_count=4, top_pt_count=4)
+
+        assert "ДЕТАЛЬНЫЙ МАТЕМАТИЧЕСКИЙ ПРОТОКОЛ" in log_content
+        assert "СИСТЕМА #" in log_content
+        assert "Расширенный алгоритм Евклида" in log_content
+        assert "ИТОГОВЫЙ РЕЙТИНГ ДОПУСТИМЫХ КЛЮЧЕЙ" in log_content
+        assert "a=27, b=13" in log_content
+

@@ -468,6 +468,17 @@ def handle_cryptanalysis() -> None:
     best_sc, best_a, best_b, best_mapping, best_dec = evaluated[0]
     print(f"\n>> Рекомендуемый ключ: a = {best_a}, b = {best_b} ({best_mapping})")
 
+    save_log = input("\nСохранить детальный математический протокол решения всех систем в файл? (y/n, по умолчанию n): ").strip().lower()
+    if save_log in ("y", "yes", "да"):
+        default_log_file = os.path.join(OUTPUTS_DIR, "cryptanalysis_math_log.txt")
+        log_file = input(f"Путь к файлу [по умолчанию: {default_log_file}, 0 - отмена]: ").strip()
+        if log_file != "0":
+            log_file = log_file or default_log_file
+            print(">> Формирование подробного математического протокола...")
+            content = ac.generate_cryptanalysis_math_log(text, current_alphabet)
+            save_text_file(log_file, content)
+            print(f">> Детальный математический протокол сохранен в: {log_file}")
+
 
 def handle_variant_task() -> None:
     print("\n--- 4. ВЫПОЛНЕНИЕ ЗАДАНИЯ ПО ВАРИАНТУ (ВАРИАНТ № 16) ---")

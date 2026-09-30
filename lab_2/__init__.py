@@ -36,7 +36,8 @@ from lab_2.cryptanalysis import (
     generate_hypotheses_systems,
     score_russian_text,
     score_text,
-    crack_affine_cipher
+    crack_affine_cipher,
+    generate_cryptanalysis_math_log
 )
 
 __all__ = [
@@ -60,4 +61,5 @@ __all__ = [
     "score_russian_text",
     "score_text",
     "crack_affine_cipher",
+    "generate_cryptanalysis_math_log",
 ]
