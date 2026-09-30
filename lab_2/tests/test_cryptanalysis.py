@@ -32,6 +32,26 @@ class TestCryptanalysis:
 
         assert expected_key in all_valid_keys
 
+    def test_hypotheses_generation_fixes_top_two_ciphertext_chars(self, variant_16_data):
+        """Проверка требования: фиксируются ровно 2 частых символа ШТ, перебираются частоты алфавита по убыванию."""
+        ct = variant_16_data["ciphertext"]
+        expected_key = variant_16_data["key"]
+
+        # По умолчанию top_ct_count=2, top_pt_count=6
+        hypotheses = generate_hypotheses_systems(ct)
+        # 6 эталонных букв -> 6 * 5 = 30 систем
+        assert len(hypotheses) == 30
+
+        # Во всех системах правые части - это строго топ-2 буквы шифр-текста ('з' и 'м')
+        for h in hypotheses:
+            assert "E(" in h["mapping"]
+            assert "=з" in h["mapping"]
+            assert "=м" in h["mapping"]
+
+        # Истинный ключ (27, 13) присутствует среди допустимых
+        valid_keys = [k for h in hypotheses for k in h["valid_keys"]]
+        assert expected_key in valid_keys
+
     def test_crack_affine_cipher_finds_variant_16(self, variant_16_data):
         ct = variant_16_data["ciphertext"]
         expected_key = variant_16_data["key"]

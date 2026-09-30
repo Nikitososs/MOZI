@@ -55,7 +55,7 @@ def frequency_analysis(
 def generate_hypotheses_systems(
     ciphertext: str,
     alphabet: Optional[Alphabet] = None,
-    top_ct_count: int = 6,
+    top_ct_count: int = 2,
     top_pt_count: int = 6
 ) -> List[Dict[str, Any]]:
     """
@@ -221,8 +221,8 @@ def crack_affine_cipher(
 def generate_cryptanalysis_math_log(
     ciphertext: str,
     alphabet: Optional[Alphabet] = None,
-    top_ct_count: int = 5,
-    top_pt_count: int = 5
+    top_ct_count: int = 2,
+    top_pt_count: int = 6
 ) -> str:
     """
     Генерирует исчерпывающий пошаговый математический протокол криптоанализа аффинного шифра:

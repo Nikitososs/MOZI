@@ -432,7 +432,8 @@ def handle_cryptanalysis() -> None:
     print("=" * 65)
 
     print("\nВыдвижение гипотез на основе систем сравнений...")
-    hypotheses = ac.generate_hypotheses_systems(text, current_alphabet, top_ct_count=5, top_pt_count=5)
+    print("Фиксируются 2 наиболее частых символа шифр-текста, перебираются эталонные частоты алфавита по убыванию:")
+    hypotheses = ac.generate_hypotheses_systems(text, current_alphabet, top_ct_count=2, top_pt_count=6)
     valid_hypotheses = [h for h in hypotheses if h["valid_keys"]]
 
     print(f"Всего проверено систем: {len(hypotheses)}, систем с допустимыми ключами: {len(valid_hypotheses)}")
