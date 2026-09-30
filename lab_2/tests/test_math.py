@@ -60,6 +60,23 @@ class TestModInverse:
         assert pos_inv == expected_inv
         assert (a * pos_inv) % m == 1
 
+    def test_negative_bezout_conversion(self):
+        # a=9, m=32: u = -7 < 0 -> pos_inv = 25
+        is_inv, u, pos_inv, desc = mod_inverse(9, 32)
+        assert is_inv is True
+        assert u == -7
+        assert pos_inv == 25
+        assert "-7" in desc and "25" in desc
+        assert "наименьший положительный вычет" in desc
+
+        # a=27, m=32: u = -13 < 0 -> pos_inv = 19
+        is_inv, u, pos_inv, desc = mod_inverse(27, 32)
+        assert is_inv is True
+        assert u == -13
+        assert pos_inv == 19
+        assert "-13" in desc and "19" in desc
+
+
     @pytest.mark.parametrize("a, m", [
         (2, 32),
         (4, 32),

@@ -48,7 +48,9 @@ def mod_inverse(a: int, m: int) -> Tuple[bool, Optional[int], Optional[int], str
       1. Если НОД(a, m) != 1:
          (False, None, None, "Необратимо: НОД(a, m) = d != 1")
       2. Если НОД(a, m) == 1:
-         (True, u, u % m, "Обратимо: коэффициент Безу u, положительное обратное u % m")
+         (True, u, pos_inverse, description)
+         где pos_inverse — наименьший положительный вычет по модулю m
+         (если коэффициент Безу u < 0, выполняется преобразование к положительному вычету: u + k*m).
     """
     if m <= 0:
         raise ValueError(f"Модуль m должен быть строго положительным (получено m = {m})")
@@ -58,9 +60,19 @@ def mod_inverse(a: int, m: int) -> Tuple[bool, Optional[int], Optional[int], str
         return False, None, None, f"Необратимо: НОД({a}, {m}) = {d} != 1"
 
     pos_inv = u % m
+    if pos_inv <= 0 and m > 1:
+        pos_inv += m
+
+    if u < 0:
+        k = (-u + m - 1) // m
+        shift_expr = f"{m}" if k == 1 else f"{k}*{m}"
+        step_str = f"коэффициент Безу u = {u} < 0, приводим к наименьшему положительному вычету: {u} + {shift_expr} = {pos_inv}"
+    else:
+        step_str = f"коэффициент Безу u = {u}"
+
     return True, u, pos_inv, (
-        f"Обратимо: коэффициент Безу u = {u}; "
-        f"наименьшее неотрицательное обратное = {pos_inv}"
+        f"Обратимо: {step_str}; "
+        f"наименьший положительный вычет a^(-1) = {pos_inv}"
     )
 
 
