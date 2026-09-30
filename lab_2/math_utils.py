@@ -130,22 +130,22 @@ def solve_system_congruences(
     a: int,
     b: int,
     c: int,
-    d_val: int,
+    d: int,
     m: int
 ) -> Tuple[int, List[Tuple[int, int]], str]:
     """
     Решение системы линейных сравнений вида:
       (a * x + y) ≡ b (mod m)
-      (c * x + y) ≡ d_val (mod m)
+      (c * x + y) ≡ d (mod m)
 
     В контексте аффинного шифра:
       x играет роль первой части ключа 'a',
       y играет роль второй части ключа 'b'.
 
     Вычитая второе сравнение из первого, получаем:
-      (a - c) * x ≡ (b - d_val) (mod m)
+      (a - c) * x ≡ (b - d) (mod m)
 
-    Вход: a, b, c, d_val, m
+    Вход: a, b, c, d, m
     Выход: (status, solutions, description)
       status:
         1 - Решений нет
@@ -156,7 +156,7 @@ def solve_system_congruences(
         raise ValueError(f"Модуль m должен быть положительным (получено m = {m})")
 
     diff_coeff = (a - c) % m
-    diff_val = (b - d_val) % m
+    diff_val = (b - d) % m
 
     st, x_solutions, _ = solve_linear_congruence(diff_coeff, diff_val, m)
 
@@ -164,7 +164,7 @@ def solve_system_congruences(
         return (
             1,
             [],
-            f"1. Решений нет: разностное сравнение ({a} - {c})x ≡ ({b} - {d_val}) (mod {m}) неразрешимо"
+            f"1. Решений нет: разностное сравнение ({a} - {c})x ≡ ({b} - {d}) (mod {m}) неразрешимо"
         )
 
     pairs: List[Tuple[int, int]] = []

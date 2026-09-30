@@ -239,8 +239,8 @@ def handle_solve_system() -> None:
     c = prompt_int("Введите коэффициент c")
     if c is None:
         return
-    d_val = prompt_int("Введите значение d")
-    if d_val is None:
+    d = prompt_int("Введите значение d")
+    if d is None:
         return
     m = prompt_int("Введите модуль m", default=current_alphabet.power)
     if m is None:
@@ -249,9 +249,9 @@ def handle_solve_system() -> None:
         print(">> Ошибка: модуль m должен быть целым числом >= 2.")
         return
 
-    st, sols, desc = ac.solve_system_congruences(a, b, c, d_val, m)
+    st, sols, desc = ac.solve_system_congruences(a, b, c, d, m)
     print("\n" + "=" * 50)
-    print(f"Система:\n  ({a}x + y) ≡ {b} (mod {m})\n  ({c}x + y) ≡ {d_val} (mod {m})")
+    print(f"Система:\n  ({a}x + y) ≡ {b} (mod {m})\n  ({c}x + y) ≡ {d} (mod {m})")
     print(f"Статус решения: {desc}")
     if st == 1:
         print("Результат: 1. Решений нет")
@@ -259,7 +259,7 @@ def handle_solve_system() -> None:
         x0, y0 = sols[0]
         print(f"Результат: 2. Одно решение: (x = {x0}, y = {y0})")
         print(f"Проверка ур. 1: ({a}*{x0} + {y0}) mod {m} = {(a*x0 + y0) % m} (== {b % m})")
-        print(f"Проверка ур. 2: ({c}*{x0} + {y0}) mod {m} = {(c*x0 + y0) % m} (== {d_val % m})")
+        print(f"Проверка ур. 2: ({c}*{x0} + {y0}) mod {m} = {(c*x0 + y0) % m} (== {d % m})")
     elif st == 3:
         print(f"Результат: 3. Много решений (всего {len(sols)}):")
         for idx, (x, y) in enumerate(sols, 1):
