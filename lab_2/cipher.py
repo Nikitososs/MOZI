@@ -22,13 +22,20 @@ class AffineCipher:
     def power(self) -> int:
         return self.alphabet.power
 
-    def validate_key(self, a: int) -> None:
-        """Проверка обратимости коэффициента a по модулю мощности алфавита."""
-        gcd_val = math.gcd(a, self.power)
+    def validate_key(self, a: int, b: Optional[int] = None) -> Tuple[int, int]:
+        """Проверка обратимости коэффициента a по модулю мощности алфавита и приведение ключа."""
+        a_eff = a % self.power
+        if a_eff == 0:
+            raise ValueError(
+                f"Коэффициент a={a} кратен модулю m={self.power} (необратим)"
+            )
+        gcd_val = math.gcd(a_eff, self.power)
         if gcd_val != 1:
             raise ValueError(
-                f"Коэффициент a={a} необратим по модулю m={self.power} (НОД={gcd_val} ≠ 1)"
+                f"Коэффициент a={a} необратим по модулю m={self.power} (НОД={gcd_val} != 1)"
             )
+        b_eff = (b % self.power) if b is not None else 0
+        return a_eff, b_eff
 
     def E_k(self, x: int, a: int, b: int) -> int:
         """

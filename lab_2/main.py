@@ -171,8 +171,8 @@ def handle_mod_inverse() -> None:
     m = prompt_int("Введите модуль m", default=current_alphabet.power)
     if m is None:
         return
-    if m <= 0:
-        print(">> Ошибка: модуль m должен быть > 0.")
+    if m <= 1:
+        print(">> Ошибка: модуль m должен быть целым числом >= 2.")
         return
 
     is_inv, u, pos_inv, desc = ac.mod_inverse(a, m)
@@ -200,8 +200,8 @@ def handle_solve_linear_congruence() -> None:
     m = prompt_int("Введите модуль m", default=current_alphabet.power)
     if m is None:
         return
-    if m <= 0:
-        print(">> Ошибка: модуль m должен быть > 0.")
+    if m <= 1:
+        print(">> Ошибка: модуль m должен быть целым числом >= 2.")
         return
 
     st, sols, desc = ac.solve_linear_congruence(a, b, m)
@@ -241,8 +241,8 @@ def handle_solve_system() -> None:
     m = prompt_int("Введите модуль m", default=current_alphabet.power)
     if m is None:
         return
-    if m <= 0:
-        print(">> Ошибка: модуль m должен быть > 0.")
+    if m <= 1:
+        print(">> Ошибка: модуль m должен быть целым числом >= 2.")
         return
 
     st, sols, desc = ac.solve_system_congruences(a, b, c, d_val, m)
@@ -311,8 +311,10 @@ def handle_encrypt() -> None:
     a = prompt_int("Введите первую часть ключа a (взаимно просто с m)")
     if a is None:
         return
-    if ac.extended_gcd(a, m)[0] != 1:
-        print(f">> Ошибка: коэффициент a={a} не взаимно прост с m={m}. Обратного элемента нет!")
+    a_red = a % m
+    if a_red == 0 or ac.extended_gcd(a_red, m)[0] != 1:
+        gcd_val = ac.extended_gcd(a_red, m)[0]
+        print(f">> Ошибка: коэффициент a={a} (a mod {m} = {a_red}) не взаимно прост с m={m} (НОД={gcd_val}). Обратного элемента нет!")
         return
 
     b = prompt_int(f"Введите вторую часть ключа b (0..{m-1})")
@@ -325,8 +327,8 @@ def handle_encrypt() -> None:
         return
     case_mode, filter_alpha = case_info
 
-    encrypted_text = current_alphabet.encrypt(
-        text, a, b, filter_non_alpha=filter_alpha, case_mode=case_mode
+    encrypted_text = ac.encrypt(
+        text, a, b, alphabet=current_alphabet, filter_non_alpha=filter_alpha, case_mode=case_mode
     )
     last_used_key = (a, b)
 
@@ -365,8 +367,10 @@ def handle_decrypt() -> None:
     a = prompt_int("Введите первую часть ключа a", default=def_a)
     if a is None:
         return
-    if ac.extended_gcd(a, m)[0] != 1:
-        print(f">> Ошибка: коэффициент a={a} не взаимно прост с m={m}. Обратного элемента нет!")
+    a_red = a % m
+    if a_red == 0 or ac.extended_gcd(a_red, m)[0] != 1:
+        gcd_val = ac.extended_gcd(a_red, m)[0]
+        print(f">> Ошибка: коэффициент a={a} (a mod {m} = {a_red}) не взаимно прост с m={m} (НОД={gcd_val}). Обратного элемента нет!")
         return
 
     b = prompt_int(f"Введите вторую часть ключа b (0..{m-1})", default=def_b)
@@ -379,7 +383,7 @@ def handle_decrypt() -> None:
         return
     case_mode, _ = case_info
 
-    decrypted_text = current_alphabet.decrypt(text, a, b, case_mode=case_mode)
+    decrypted_text = ac.decrypt(text, a, b, alphabet=current_alphabet, case_mode=case_mode)
 
     print("\n" + "=" * 60)
     print(f"КЛЮЧ: (a = {a}, b = {b}) [a^(-1) = {ac.mod_inverse(a, m)[2]}]")
@@ -410,6 +414,11 @@ def handle_cryptanalysis() -> None:
         return
 
     fa = ac.frequency_analysis(text, current_alphabet)
+    if fa["total_alpha_chars"] == 0:
+        print(f"\n>> Ошибка: в тексте нет символов выбранного алфавита ('{current_alphabet.name}').")
+        print(">> Частотный анализ невозможен. Проверьте правильность введенного текста или активного алфавита.")
+        return
+
     print("\n" + "=" * 65)
     print(f"РЕЗУЛЬТАТЫ ЧАСТОТНОГО АНАЛИЗА (всего букв: {fa['total_alpha_chars']}):")
     print("Символ | Кол-во | Частота в тексте")
@@ -424,6 +433,11 @@ def handle_cryptanalysis() -> None:
 
     print(f"Всего проверено систем: {len(hypotheses)}, систем с допустимыми ключами: {len(valid_hypotheses)}")
 
+    if not valid_hypotheses:
+        print("\n>> Предупреждение: не удалось составить разрешимые системы сравнений с допустимыми ключами.")
+        print(">> Текст слишком короткий либо не содержит достаточного разнообразия символов.")
+        return
+
     print("\nЗапуск процедуры постепенного перебора ключей с оценкой осмысленности:")
     evaluated = []
     seen = set()
@@ -432,11 +446,15 @@ def handle_cryptanalysis() -> None:
             if (a, b) in seen:
                 continue
             seen.add((a, b))
-            dec = current_alphabet.decrypt(text, a, b)
-            sc = ac.score_russian_text(dec)
+            dec = ac.decrypt(text, a, b, alphabet=current_alphabet)
+            sc = ac.score_text(dec, current_alphabet)
             evaluated.append((sc, a, b, h["mapping"], dec))
 
     evaluated.sort(key=lambda item: item[0], reverse=True)
+
+    if not evaluated:
+        print("\n>> Не удалось сформировать допустимые варианты расшифрования.")
+        return
 
     print(f"\nТоп наиболее вероятных ключей:")
     for idx, (sc, a, b, mapping, dec) in enumerate(evaluated[:5], 1):

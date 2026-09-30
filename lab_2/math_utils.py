@@ -55,7 +55,7 @@ def mod_inverse(a: int, m: int) -> Tuple[bool, Optional[int], Optional[int], str
 
     d, u, _ = extended_gcd(a, m)
     if d != 1:
-        return False, None, None, f"Необратимо: НОД({a}, {m}) = {d} ≠ 1"
+        return False, None, None, f"Необратимо: НОД({a}, {m}) = {d} != 1"
 
     pos_inv = u % m
     return True, u, pos_inv, (

@@ -10,7 +10,7 @@ from collections import Counter
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
-from lab_2.alphabet import Alphabet, DEFAULT_ALPHABET, RUSSIAN_FREQUENCIES
+from lab_2.alphabet import Alphabet, DEFAULT_ALPHABET, RUSSIAN_FREQUENCIES, get_reference_frequencies
 from lab_2.cipher import AffineCipher
 from lab_2.math_utils import solve_system_congruences
 
@@ -67,8 +67,19 @@ def generate_hypotheses_systems(
     alpha = alphabet or DEFAULT_ALPHABET
     m = alpha.power
     fa = frequency_analysis(ciphertext, alpha)
-    top_ct = [item[0] for item in fa["sorted_chars"][:top_ct_count]]
-    top_pt = [item[0] for item in RUSSIAN_FREQUENCIES[:top_pt_count]]
+    if fa["total_alpha_chars"] == 0:
+        return []
+
+    # Берем только фактически встретившиеся в шифр-тексте символы алфавита
+    non_zero_ct = [item[0] for item in fa["sorted_chars"] if item[1] > 0]
+    if len(non_zero_ct) < 2:
+        return []
+
+    top_ct = non_zero_ct[:top_ct_count]
+    ref_freq = get_reference_frequencies(alpha)
+    top_pt = [item[0] for item in ref_freq[:top_pt_count] if item[0] in alpha.char_to_code]
+    if len(top_pt) < 2:
+        return []
 
     hypotheses: List[Dict[str, Any]] = []
 
@@ -98,61 +109,83 @@ def generate_hypotheses_systems(
     return hypotheses
 
 
-_FREQ_DICT: Dict[str, float] = dict(RUSSIAN_FREQUENCIES)
-
-# Наиболее частотные биграммы русского языка (НКРЯ / частотные словари)
-_COMMON_BIGRAMS = {
+_RU_FREQ_DICT: Dict[str, float] = dict(RUSSIAN_FREQUENCIES)
+_RU_COMMON_BIGRAMS = {
     "ст", "но", "то", "на", "ен", "ов", "ни", "ра", "во", "ко",
     "ро", "по", "ал", "пр", "ос", "ли", "ес", "од", "не", "го",
     "ре", "ер", "от", "ва", "ла", "ет", "ит", "та", "те", "ти"
 }
-
-# Нехарактерные и запрещенные буквосочетания в русском языке
-_FORBIDDEN_BIGRAMS = {
+_RU_FORBIDDEN_BIGRAMS = {
     "ъъ", "ьь", "ыь", "ъь", "ыы", "йь", "жы", "шы", "чя", "щя",
     "чю", "щю", "оы", "аы", "еы", "иы", "уы", "эы", "юы", "яы",
     "ьы", "ъы", "ъа", "ъо", "ъу", "ъэ", "ъи"
 }
-
-# Общеупотребительные служебные слова и союзы (частотный словарь русского языка)
-_COMMON_WORDS = {
+_RU_COMMON_WORDS = {
     "и", "в", "не", "на", "я", "с", "что", "а", "по", "он", "как",
     "то", "но", "мы", "к", "у", "вы", "за", "бы", "же", "от", "о",
     "из", "до", "да", "ли", "или", "если", "для", "при", "был", "ты",
     "все", "так", "его", "она", "они", "еще"
 }
 
+_EN_COMMON_BIGRAMS = {
+    "th", "he", "in", "er", "an", "re", "nd", "at", "on", "nt",
+    "ha", "es", "st", "en", "ed", "to", "it", "ou", "ea", "hi",
+    "is", "or", "ti", "as", "te", "et", "ng", "of", "al", "de"
+}
+_EN_FORBIDDEN_BIGRAMS = {
+    "qj", "qx", "qz", "jq", "jx", "jz", "wq", "wv", "wx", "wz",
+    "zj", "zq", "zx"
+}
+_EN_COMMON_WORDS = {
+    "the", "be", "to", "of", "and", "a", "in", "that", "have", "i",
+    "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
+    "this", "but", "his", "by", "from", "they", "we", "say", "her",
+    "she", "or", "an", "will", "my", "one", "all", "would", "there", "their"
+}
 
-def score_russian_text(text: str) -> float:
+
+def score_text(text: str, alphabet: Optional[Alphabet] = None) -> float:
     """
-    Статистическая и n-граммная оценка правдоподобия русского текста:
+    Статистическая и n-граммная оценка правдоподобия расшифрованного текста
+    с адаптацией под русский либо английский язык:
     - скалярное произведение частот букв с эталонным распределением языка;
-    - учет частотных биграмм русского языка;
-    - штраф за запрещенные и невозможные буквосочетания;
+    - учет характерных частых биграмм;
+    - штраф за запрещенные и нехарактерные буквосочетания;
     - наличие общеупотребительных служебных слов и морфем.
     """
     if not text:
         return 0.0
 
-    n = len(text)
-    counts = Counter(text)
+    alpha = alphabet or DEFAULT_ALPHABET
+    is_english = "e" in alpha.symbols or "a" in alpha.symbols
 
-    # 1. Корреляция монограмм с эталонными частотами русского языка
-    freq_score = sum((counts[c] / n) * _FREQ_DICT.get(c, 0.0) for c in counts) * 1000.0
+    lower_text = text.lower()
+    n = len(lower_text)
+    counts = Counter(lower_text)
 
-    # 2. Оценка биграмм и штраф за запрещенные сочетания
+    ref_freq_map = dict(get_reference_frequencies(alpha))
+    freq_score = sum((counts[c] / n) * ref_freq_map.get(c, 0.0) for c in counts) * 1000.0
+
+    common_bigrams = _EN_COMMON_BIGRAMS if is_english else _RU_COMMON_BIGRAMS
+    forbidden_bigrams = _EN_FORBIDDEN_BIGRAMS if is_english else _RU_FORBIDDEN_BIGRAMS
+    common_words = _EN_COMMON_WORDS if is_english else _RU_COMMON_WORDS
+
     bg_score = 0.0
     for i in range(n - 1):
-        bg = text[i:i + 2]
-        if bg in _COMMON_BIGRAMS:
+        bg = lower_text[i:i + 2]
+        if bg in common_bigrams:
             bg_score += 2.5
-        elif bg in _FORBIDDEN_BIGRAMS:
+        elif bg in forbidden_bigrams:
             bg_score -= 25.0
 
-    # 3. Наличие общеупотребительных слов (длиной >= 2)
-    word_score = sum(text.count(w) * 1.5 for w in _COMMON_WORDS if len(w) >= 2)
+    word_score = sum(lower_text.count(w) * 1.5 for w in common_words if len(w) >= 2)
 
     return freq_score + bg_score + word_score
+
+
+def score_russian_text(text: str) -> float:
+    """Обратная совместимость: оценка текста по критериям русского языка."""
+    return score_text(text, DEFAULT_ALPHABET)
 
 
 def crack_affine_cipher(
@@ -178,7 +211,7 @@ def crack_affine_cipher(
                 continue
             seen_keys.add((a, b))
             dec_text = cipher.decrypt(ciphertext, a, b)
-            score = score_russian_text(dec_text)
+            score = score_text(dec_text, alpha)
             evaluated.append((score, (a, b), h["mapping"], dec_text))
 
     evaluated.sort(key=lambda item: item[0], reverse=True)

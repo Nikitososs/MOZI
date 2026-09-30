@@ -111,9 +111,21 @@ class TestSolveLinearCongruence:
         for x in sols:
             assert (6 * x) % 30 == 12
 
+    def test_invalid_modulus(self):
+        with pytest.raises(ValueError):
+            solve_linear_congruence(2, 3, 0)
+        with pytest.raises(ValueError):
+            solve_linear_congruence(2, 3, -5)
+
 
 class TestSolveSystemCongruences:
     """Тестирование решения системы линейных сравнений."""
+
+    def test_invalid_modulus(self):
+        with pytest.raises(ValueError):
+            solve_system_congruences(1, 2, 3, 4, 0)
+        with pytest.raises(ValueError):
+            solve_system_congruences(1, 2, 3, 4, -1)
 
     def test_manual_example_1_system_1(self, manual_examples):
         # 14a + b ≡ 8, 5a + b ≡ 19 (mod 32) -> a = 13, b = 18
@@ -141,3 +153,4 @@ class TestSolveSystemCongruences:
         st, sols, _ = solve_system_congruences(14, 7, 5, 20, 32)
         assert st == 2
         assert sols == [(27, 13)]
+

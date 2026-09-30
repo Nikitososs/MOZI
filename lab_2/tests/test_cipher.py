@@ -63,3 +63,64 @@ class TestAffineCipherTransformations:
         # Для m=32 допустимых ключей 16 * 32 = 512
         bf = brute_force("проверка")
         assert len(bf) == 512
+
+    def test_invalid_keys_edge_cases(self):
+        cipher = AffineCipher(DEFAULT_ALPHABET)
+        # a кратно m (a % 32 == 0)
+        with pytest.raises(ValueError, match="кратен модулю"):
+            cipher.validate_key(0, 5)
+        with pytest.raises(ValueError, match="кратен модулю"):
+            cipher.validate_key(32, 5)
+        with pytest.raises(ValueError, match="кратен модулю"):
+            cipher.validate_key(64, 5)
+        # a не взаимно просто с 32
+        with pytest.raises(ValueError, match="необратим"):
+            cipher.validate_key(2, 5)
+        with pytest.raises(ValueError, match="необратим"):
+            cipher.validate_key(16, 5)
+
+    def test_key_modulo_equivalence(self):
+        cipher = AffineCipher(DEFAULT_ALPHABET)
+        # a=35 эквивалентно a=3 (НОД(3, 32)=1)
+        a_eff, b_eff = cipher.validate_key(35, 33)
+        assert a_eff == 3
+        assert b_eff == 1
+        # шифрование с (35, 33) идентично шифрованию с (3, 1)
+        txt = "тест"
+        assert cipher.encrypt(txt, 35, 33) == cipher.encrypt(txt, 3, 1)
+
+    def test_alphabet_validation(self):
+        # Алфавит менее чем из 2 символов недопустим
+        with pytest.raises(ValueError, match="не менее 2"):
+            Alphabet("single", "a")
+        with pytest.raises(ValueError, match="не менее 2"):
+            Alphabet("empty", "")
+        # Проверка неизвестного символа
+        with pytest.raises(ValueError, match="не входит в алфавит"):
+            DEFAULT_ALPHABET.A("~")
+        # Проверка нечислового индекса
+        with pytest.raises(TypeError, match="целым числом"):
+            DEFAULT_ALPHABET.A_inv("0")  # type: ignore
+        # Проверка циклического взятия по модулю
+        assert DEFAULT_ALPHABET.A_inv(32) == DEFAULT_ALPHABET.A_inv(0)
+        assert DEFAULT_ALPHABET.A_inv(-1) == DEFAULT_ALPHABET.A_inv(31)
+
+    def test_alphabet_delegate_methods(self):
+        # Проверка удобных методов Alphabet.encrypt и Alphabet.decrypt
+        txt = "привет"
+        enc = DEFAULT_ALPHABET.encrypt(txt, 27, 13)
+        dec = DEFAULT_ALPHABET.decrypt(enc, 27, 13)
+        assert dec == txt
+
+    def test_non_alphabet_symbols_handling(self):
+        txt = "Привет, мир! 123"
+        # Режим preserve: знаки препинания и пробелы сохраняются
+        enc = encrypt(txt, 27, 13, case_mode="preserve", filter_non_alpha=False)
+        assert "!" in enc and "123" in enc and "," in enc
+        dec = decrypt(enc, 27, 13, case_mode="preserve")
+        assert dec == txt
+
+        # Режим filter_non_alpha: только буквы алфавита
+        enc_filtered = encrypt(txt, 27, 13, filter_non_alpha=True)
+        assert "!" not in enc_filtered and " " not in enc_filtered
+

@@ -194,3 +194,33 @@ def test_russian_yo_case_preservation():
     assert dec == "Еж и Медведь"
 
 
+def test_alphabet_validation_and_edge_cases():
+    import pytest
+    with pytest.raises(ValueError, match="не менее 2"):
+        Alphabet("single", "a")
+    with pytest.raises(ValueError, match="не менее 2"):
+        Alphabet("empty", "")
+
+    alpha = get_alphabet("ru")
+    with pytest.raises(ValueError, match="не входит в алфавит"):
+        alpha.A("$")
+
+
+def test_key_equivalence_and_empty_text():
+    # Пустой текст
+    assert encrypt("", 5) == ""
+    assert decrypt("", 5) == ""
+
+    # Нулевой сдвиг
+    assert encrypt("тест", 0) == "тест"
+    assert decrypt("тест", 0) == "тест"
+
+    # Ключ больше мощности алфавита (k = 33 при m = 32 эквивалентно k = 1)
+    assert encrypt("привет", 33) == encrypt("привет", 1)
+    assert decrypt("привет", 33) == decrypt("привет", 1)
+
+    # Отрицательный ключ (k = -1 эквивалентно k = 31)
+    assert encrypt("привет", -1) == encrypt("привет", 31)
+
+
+

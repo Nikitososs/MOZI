@@ -9,6 +9,8 @@ class Alphabet:
         normalize_map: Optional[Dict[str, str]] = None,
         case_sensitive: bool = False
     ):
+        if len(symbols) < 2:
+            raise ValueError(f"Мощность алфавита должна составлять не менее 2 символов (получено: {len(symbols)})")
         self.name = name
         self.symbols = symbols
         self.power = len(symbols)

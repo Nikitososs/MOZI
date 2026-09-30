@@ -53,3 +53,47 @@ class TestCryptanalysis:
 
         matching = [key for key, text in bf_results if text == expected_pt]
         assert matching == [(27, 13)]
+
+    def test_frequency_analysis_empty_and_non_alpha(self):
+        # Пустой ввод
+        fa_empty = frequency_analysis("")
+        assert fa_empty["total_alpha_chars"] == 0
+        assert fa_empty["frequencies"]["а"] == 0.0
+
+        # Ввод без букв алфавита (только цифры и символы)
+        fa_punct = frequency_analysis("12345 !@#$")
+        assert fa_punct["total_alpha_chars"] == 0
+
+    def test_hypotheses_generation_edge_cases(self):
+        # При отсутствии букв или наличии только 1 уникальной буквы системы не строятся
+        assert generate_hypotheses_systems("") == []
+        assert generate_hypotheses_systems("!!!!") == []
+        assert generate_hypotheses_systems("аааааааа") == []
+
+        # crack_affine_cipher возвращает пустой список для нерелевантного текста
+        assert crack_affine_cipher("") == []
+        assert crack_affine_cipher("12345") == []
+
+    def test_english_cryptanalysis(self):
+        from lab_2.alphabet import EN_ALPHABET
+        from lab_2.cipher import encrypt
+
+        sample_en = (
+            "the mathematical foundations of information security is an essential discipline. "
+            "classical cryptography and frequency analysis allow recovering original plaintexts."
+        )
+        # Для EN m=26; выберем ключ a=5 (НОД(5, 26)=1), b=8
+        key_a, key_b = 5, 8
+        ct_en = encrypt(sample_en, key_a, key_b, alphabet=EN_ALPHABET)
+
+        # Проверим генерацию гипотез с EN_ALPHABET
+        hyps = generate_hypotheses_systems(ct_en, alphabet=EN_ALPHABET, top_ct_count=5, top_pt_count=5)
+        all_keys = [k for h in hyps for k in h["valid_keys"]]
+        assert (key_a, key_b) in all_keys
+
+        # Проверим ранжирование через crack_affine_cipher
+        cracked = crack_affine_cipher(ct_en, alphabet=EN_ALPHABET, top_n=3)
+        assert len(cracked) > 0
+        best_sc, best_k, _, _ = cracked[0]
+        assert best_k == (key_a, key_b)
+
