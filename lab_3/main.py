@@ -1,8 +1,10 @@
-"""Консольное меню и пакетный запуск: python -m lab_3.main."""
+"""TUI и пакетный запуск: python -m lab_3.main."""
 
 import argparse
 import csv
+from datetime import datetime
 from pathlib import Path
+import shutil
 
 from common.io_utils import read_text_file
 from lab_3.entropy import analyze, prepare_text
@@ -30,15 +32,17 @@ def save_plot(results, path: Path) -> None:
     plt.close(fig)
 
 
-def run_analysis(text: str, language: str, output: Path = OUTPUT) -> None:
-    """Вывести все частоты и сохранить текст, таблицы и график."""
+def run_analysis(text: str, language: str, output: Path = OUTPUT) -> Path:
+    """Вывести анализ и сохранить отдельный архив вычисления с графиком."""
     cleaned = prepare_text(text, language)
     results = analyze(cleaned)
     output.mkdir(parents=True, exist_ok=True)
+    run_dir = output / datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
+    run_dir.mkdir()
     lines = [f"Язык: {language}; букв после обработки: {len(cleaned)}",
              f"Очищенный текст: {cleaned}",
              "Перекрывающиеся k-граммы, шаг 1."]
-    with (output / "frequencies.csv").open("w", encoding="utf-8-sig", newline="") as f:
+    with (run_dir / "frequencies.csv").open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["k", "gram", "count", "probability"])
         for r in results:
@@ -48,7 +52,7 @@ def run_analysis(text: str, language: str, output: Path = OUTPUT) -> None:
                 lines.append(f"{gram}: {n}; p={p:.8f}")
                 writer.writerow([r.k, gram, n, p])
     lines.append("\nk    Hk, бит    Hk/k, бит/символ")
-    with (output / "entropy.csv").open("w", encoding="utf-8-sig", newline="") as f:
+    with (run_dir / "entropy.csv").open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["k", "windows", "unique", "Hk", "Hk/k"])
         for r in results:
@@ -58,46 +62,16 @@ def run_analysis(text: str, language: str, output: Path = OUTPUT) -> None:
     lines.append(f"Hk: {[r.entropy for r in results]}")
     lines.append(f"Hk/k: {[r.normalized for r in results]}")
     content = "\n".join(lines)
-    (output / "analysis.txt").write_text(content, encoding="utf-8")
-    (output / "prepared.txt").write_text(cleaned, encoding="utf-8")
-    save_plot(results, output / "entropy.png")
+    (run_dir / "analysis.txt").write_text(content, encoding="utf-8")
+    (run_dir / "prepared.txt").write_text(cleaned, encoding="utf-8")
+    save_plot(results, run_dir / "entropy.png")
+    (run_dir / "input.txt").write_text(text, encoding="utf-8")
+    # Обновить удобные ссылки на последний расчёт и совместимость отчёта.
+    for name in ("analysis.txt", "prepared.txt", "frequencies.csv", "entropy.csv", "entropy.png", "input.txt"):
+        shutil.copy2(run_dir / name, output / name)
     print(content)
-    print(f"\nРезультаты сохранены: {output.resolve()}")
-
-
-def menu() -> None:
-    """Повторять ввод и анализ, сохраняя выбор языка между операциями."""
-    language = "ru"
-    while True:
-        print(f"\nЛР3. Язык: {language}\n1. Текст из консоли\n2. Текст из файла"
-              "\n3. Сменить язык\n4. Вариант 16 (русский)\n0. Выход")
-        choice = input("> ").strip()
-        try:
-            if choice == "0":
-                return
-            if choice == "3":
-                selected = input("Язык (ru/en): ").strip().lower()
-                if selected not in ("ru", "en"):
-                    raise ValueError("Выберите ru или en.")
-                language = selected
-                continue
-            if choice == "1":
-                print("Введите текст. Отдельная строка END завершает ввод.")
-                lines = []
-                while (line := input()) != "END":
-                    lines.append(line)
-                text = "\n".join(lines)
-            elif choice == "2":
-                text = read_text_file(input("Путь к файлу: ").strip().strip('"'))
-            elif choice == "4":
-                language = "ru"
-                text = read_text_file(str(VARIANT))
-            else:
-                print("Неизвестный пункт меню.")
-                continue
-            run_analysis(text, language)
-        except (OSError, UnicodeError, ValueError) as exc:
-            print(f"Ошибка: {exc}")
+    print(f"\nРезультаты этого расчёта сохранены: {run_dir.resolve()}")
+    return run_dir
 
 
 def main() -> None:
@@ -111,7 +85,8 @@ def main() -> None:
         if args.file:
             run_analysis(read_text_file(str(args.file)), args.language, args.output)
         else:
-            menu()
+            from lab_3.tui import EntropyApp
+            EntropyApp(output=args.output, language=args.language).run()
     except (OSError, UnicodeError, ValueError) as exc:
         parser.exit(1, f"Ошибка: {exc}\n")
     except (EOFError, KeyboardInterrupt):
