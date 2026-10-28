@@ -23,9 +23,15 @@ def test_extended_gcd_bezout_identity(a, b):
     assert a * x + b * y == divisor
 
 
-@pytest.mark.parametrize("base,exponent,modulus", [
-    (2, 0, 7), (2, 10, 1000), (51936, 65537, 51937), (-9, 13, 101),
-])
+@pytest.mark.parametrize(
+    "base,exponent,modulus",
+    [
+        (2, 0, 7),
+        (2, 10, 1000),
+        (51936, 65537, 51937),
+        (-9, 13, 101),
+    ],
+)
 def test_binary_modular_power_matches_builtin(base, exponent, modulus):
     assert modular_power(base, exponent, modulus) == pow(base, exponent, modulus)
 
@@ -43,7 +49,9 @@ def test_mod_inverse_and_noninvertible_value():
         mod_inverse(6, 40)
 
 
-@pytest.mark.parametrize("number,expected", [(2, True), (311, True), (1, False), (221, False), (167 * 311, False)])
+@pytest.mark.parametrize(
+    "number,expected", [(2, True), (311, True), (1, False), (221, False), (167 * 311, False)]
+)
 def test_is_prime(number, expected):
     assert is_prime(number) is expected
 

@@ -4,7 +4,7 @@ from common.io_utils import (
     format_encryption_record,
     format_bruteforce_records,
     load_text_from_file_or_record,
-    extract_key_from_text
+    extract_key_from_text,
 )
 from lab_1.caesar_cipher import (
     Alphabet,
@@ -20,7 +20,7 @@ from lab_1.caesar_cipher import (
     prepare_canonical_text,
     encrypt,
     decrypt,
-    brute_force
+    brute_force,
 )
 
 
@@ -110,7 +110,9 @@ def test_file_output_helpers(tmp_path):
     assert "тест" not in content
 
     # Проверка чтения шифр-текста из созданной записи
-    loaded_st = load_text_from_file_or_record(str(test_file), preferred_prefix="ЗАШИФРОВАННЫЙ ТЕКСТ")
+    loaded_st = load_text_from_file_or_record(
+        str(test_file), preferred_prefix="ЗАШИФРОВАННЫЙ ТЕКСТ"
+    )
     assert loaded_st == "ужуу"
 
     # Проверка автоматического извлечения ключа из файла
@@ -120,7 +122,9 @@ def test_file_output_helpers(tmp_path):
     dec_file = tmp_path / "test_dec.txt"
     dec_record = format_encryption_record("ужуу", "тест", 1, is_decryption=True)
     save_text_file(str(dec_file), dec_record)
-    loaded_ot = load_text_from_file_or_record(str(dec_file), preferred_prefix="РАСШИФРОВАННЫЙ ТЕКСТ")
+    loaded_ot = load_text_from_file_or_record(
+        str(dec_file), preferred_prefix="РАСШИФРОВАННЫЙ ТЕКСТ"
+    )
     assert loaded_ot == "тест"
 
     # Проверка чтения обычного сырого файла
@@ -145,10 +149,7 @@ def test_english_alphabet_preset():
 
 
 def test_custom_alphabet_registration():
-    custom = Alphabet(
-        name="Digits (m=10)",
-        symbols="0123456789"
-    )
+    custom = Alphabet(name="Digits (m=10)", symbols="0123456789")
     register_alphabet("digits", custom)
 
     assert get_alphabet("digits").power == 10
@@ -196,6 +197,7 @@ def test_russian_yo_case_preservation():
 
 def test_alphabet_validation_and_edge_cases():
     import pytest
+
     with pytest.raises(ValueError, match="не менее 2"):
         Alphabet("single", "a")
     with pytest.raises(ValueError, match="не менее 2"):
@@ -221,6 +223,3 @@ def test_key_equivalence_and_empty_text():
 
     # Отрицательный ключ (k = -1 эквивалентно k = 31)
     assert encrypt("привет", -1) == encrypt("привет", 31)
-
-
-

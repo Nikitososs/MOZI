@@ -123,4 +123,3 @@ class TestAffineCipherTransformations:
         # Режим filter_non_alpha: только буквы алфавита
         enc_filtered = encrypt(txt, 27, 13, filter_non_alpha=True)
         assert "!" not in enc_filtered and " " not in enc_filtered
-

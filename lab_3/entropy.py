@@ -37,11 +37,8 @@ def analyze(text: str) -> list[GramStatistics]:
         raise ValueError("После предобработки не осталось букв выбранного языка.")
     results = []
     for k in range(1, 6):
-        counts = Counter(text[i:i + k] for i in range(len(text) - k + 1))
+        counts = Counter(text[i : i + k] for i in range(len(text) - k + 1))
         total = sum(counts.values())
-        entropy = (
-            -fsum((n / total) * log2(n / total) for n in counts.values())
-            if total else None
-        )
+        entropy = -fsum((n / total) * log2(n / total) for n in counts.values()) if total else None
         results.append(GramStatistics(k, counts, total, entropy))
     return results

@@ -16,8 +16,7 @@ def test_overlapping_windows():
     assert results[1].total == 4
     assert results[1].entropy == 1
     assert results[1].normalized == 0.5
-    assert results[0].entropy == pytest.approx(
-        -0.6 * math.log2(0.6) - 0.4 * math.log2(0.4))
+    assert results[0].entropy == pytest.approx(-0.6 * math.log2(0.6) - 0.4 * math.log2(0.4))
     assert [r.total for r in results] == [5, 4, 3, 2, 1]
 
 

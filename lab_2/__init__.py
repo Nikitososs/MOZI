@@ -14,7 +14,7 @@ from lab_2.math_utils import (
     extended_gcd,
     mod_inverse,
     solve_linear_congruence,
-    solve_system_congruences
+    solve_system_congruences,
 )
 from lab_2.alphabet import (
     Alphabet,
@@ -23,21 +23,16 @@ from lab_2.alphabet import (
     EN_ALPHABET,
     RUSSIAN_FREQUENCIES,
     ENGLISH_FREQUENCIES,
-    get_reference_frequencies
+    get_reference_frequencies,
 )
-from lab_2.cipher import (
-    AffineCipher,
-    encrypt,
-    decrypt,
-    brute_force
-)
+from lab_2.cipher import AffineCipher, encrypt, decrypt, brute_force
 from lab_2.cryptanalysis import (
     frequency_analysis,
     generate_hypotheses_systems,
     score_russian_text,
     score_text,
     crack_affine_cipher,
-    generate_cryptanalysis_math_log
+    generate_cryptanalysis_math_log,
 )
 
 __all__ = [

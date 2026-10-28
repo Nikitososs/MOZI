@@ -318,7 +318,12 @@ def mod_inverse(a: int, m: int) -> Tuple[bool, Optional[int], Optional[int], str
     else:
         step_str = f"u = {u}"
 
-    return True, u, pos_inv, f"Обратимо: {step_str}; наименьший положительный вычет a^(-1) = {pos_inv}"
+    return (
+        True,
+        u,
+        pos_inv,
+        f"Обратимо: {step_str}; наименьший положительный вычет a^(-1) = {pos_inv}",
+    )
 
 
 def solve_linear_congruence(a: int, b: int, m: int) -> Tuple[int, List[int], str]:
@@ -378,7 +383,9 @@ class AffineCipher:
     def validate_key(self, a: int) -> None:
         gcd_val = math.gcd(a, self.power)
         if gcd_val != 1:
-            raise ValueError(f"Коэффициент a={a} необратим по модулю m={self.power} (НОД={gcd_val} ≠ 1)")
+            raise ValueError(
+                f"Коэффициент a={a} необратим по модулю m={self.power} (НОД={gcd_val} ≠ 1)"
+            )
 
     def E_k(self, x: int, a: int, b: int) -> int:
         self.validate_key(a)
@@ -416,7 +423,9 @@ class AffineCipher:
             return res_char.lower()
         return char
 
-    def encrypt(self, text: str, a: int, b: int, filter_non_alpha: bool = False, case_mode: str = "lower") -> str:
+    def encrypt(
+        self, text: str, a: int, b: int, filter_non_alpha: bool = False, case_mode: str = "lower"
+    ) -> str:
         if filter_non_alpha:
             src = self.alphabet.prepare_canonical_text(text)
             return "".join(self.encrypt_symbol(c, a, b, case_mode="lower") for c in src)
@@ -446,20 +455,105 @@ from lab_2.math_utils import solve_system_congruences
 
 _FREQ_DICT: Dict[str, float] = dict(RUSSIAN_FREQUENCIES)
 _COMMON_BIGRAMS = {
-    "ст", "но", "то", "на", "ен", "ов", "ни", "ра", "во", "ко",
-    "ро", "по", "ал", "пр", "ос", "ли", "ес", "од", "не", "го",
-    "ре", "ер", "от", "ва", "ла", "ет", "ит", "та", "те", "ти"
+    "ст",
+    "но",
+    "то",
+    "на",
+    "ен",
+    "ов",
+    "ни",
+    "ра",
+    "во",
+    "ко",
+    "ро",
+    "по",
+    "ал",
+    "пр",
+    "ос",
+    "ли",
+    "ес",
+    "од",
+    "не",
+    "го",
+    "ре",
+    "ер",
+    "от",
+    "ва",
+    "ла",
+    "ет",
+    "ит",
+    "та",
+    "те",
+    "ти",
 }
 _FORBIDDEN_BIGRAMS = {
-    "ъъ", "ьь", "ыь", "ъь", "ыы", "йь", "жы", "шы", "чя", "щя",
-    "чю", "щю", "оы", "аы", "еы", "иы", "уы", "эы", "юы", "яы",
-    "ьы", "ъы", "ъа", "ъо", "ъу", "ъэ", "ъи"
+    "ъъ",
+    "ьь",
+    "ыь",
+    "ъь",
+    "ыы",
+    "йь",
+    "жы",
+    "шы",
+    "чя",
+    "щя",
+    "чю",
+    "щю",
+    "оы",
+    "аы",
+    "еы",
+    "иы",
+    "уы",
+    "эы",
+    "юы",
+    "яы",
+    "ьы",
+    "ъы",
+    "ъа",
+    "ъо",
+    "ъу",
+    "ъэ",
+    "ъи",
 }
 _COMMON_WORDS = {
-    "и", "в", "не", "на", "я", "с", "что", "а", "по", "он", "как",
-    "то", "но", "мы", "к", "у", "вы", "за", "бы", "же", "от", "о",
-    "из", "до", "да", "ли", "или", "если", "для", "при", "был", "ты",
-    "все", "так", "его", "она", "они", "еще"
+    "и",
+    "в",
+    "не",
+    "на",
+    "я",
+    "с",
+    "что",
+    "а",
+    "по",
+    "он",
+    "как",
+    "то",
+    "но",
+    "мы",
+    "к",
+    "у",
+    "вы",
+    "за",
+    "бы",
+    "же",
+    "от",
+    "о",
+    "из",
+    "до",
+    "да",
+    "ли",
+    "или",
+    "если",
+    "для",
+    "при",
+    "был",
+    "ты",
+    "все",
+    "так",
+    "его",
+    "она",
+    "они",
+    "еще",
 }
 
 
@@ -469,16 +563,23 @@ def frequency_analysis(text: str, alphabet: Optional[Alphabet] = None) -> Dict[s
     total = len(canonical)
     counts = Counter(canonical)
     freqs = {c: counts.get(c, 0) / total if total > 0 else 0.0 for c in alpha.symbols}
-    sorted_items = sorted([(c, counts.get(c, 0), freqs[c]) for c in alpha.symbols], key=lambda x: x[1], reverse=True)
+    sorted_items = sorted(
+        [(c, counts.get(c, 0), freqs[c]) for c in alpha.symbols], key=lambda x: x[1], reverse=True
+    )
     return {
         "counts": dict(counts),
         "frequencies": freqs,
         "sorted_chars": sorted_items,
-        "total_alpha_chars": total
+        "total_alpha_chars": total,
     }
 
 
-def generate_hypotheses_systems(ciphertext: str, alphabet: Optional[Alphabet] = None, top_ct_count: int = 6, top_pt_count: int = 6) -> List[Dict[str, Any]]:
+def generate_hypotheses_systems(
+    ciphertext: str,
+    alphabet: Optional[Alphabet] = None,
+    top_ct_count: int = 6,
+    top_pt_count: int = 6,
+) -> List[Dict[str, Any]]:
     alpha = alphabet or DEFAULT_ALPHABET
     m = alpha.power
     fa = frequency_analysis(ciphertext, alpha)
@@ -488,38 +589,47 @@ def generate_hypotheses_systems(ciphertext: str, alphabet: Optional[Alphabet] = 
     hypotheses = []
     for y1_char in top_ct:
         for y2_char in top_ct:
-            if y1_char == y2_char: continue
+            if y1_char == y2_char:
+                continue
             for x1_char in top_pt:
                 for x2_char in top_pt:
-                    if x1_char == x2_char: continue
+                    if x1_char == x2_char:
+                        continue
                     x1, x2 = alpha.A(x1_char), alpha.A(x2_char)
                     y1, y2 = alpha.A(y1_char), alpha.A(y2_char)
                     st, solutions, desc = solve_system_congruences(x1, y1, x2, y2, m)
                     valid_keys = [(a, b) for a, b in solutions if math.gcd(a, m) == 1]
-                    hypotheses.append({
-                        "mapping": f"E({x1_char})={y1_char}, E({x2_char})={y2_char}",
-                        "status": st,
-                        "description": desc,
-                        "valid_keys": valid_keys
-                    })
+                    hypotheses.append(
+                        {
+                            "mapping": f"E({x1_char})={y1_char}, E({x2_char})={y2_char}",
+                            "status": st,
+                            "description": desc,
+                            "valid_keys": valid_keys,
+                        }
+                    )
     return hypotheses
 
 
 def score_russian_text(text: str) -> float:
-    if not text: return 0.0
+    if not text:
+        return 0.0
     n = len(text)
     counts = Counter(text)
     freq_score = sum((counts[c] / n) * _FREQ_DICT.get(c, 0.0) for c in counts) * 1000.0
     bg_score = 0.0
     for i in range(n - 1):
-        bg = text[i:i + 2]
-        if bg in _COMMON_BIGRAMS: bg_score += 2.5
-        elif bg in _FORBIDDEN_BIGRAMS: bg_score -= 25.0
+        bg = text[i : i + 2]
+        if bg in _COMMON_BIGRAMS:
+            bg_score += 2.5
+        elif bg in _FORBIDDEN_BIGRAMS:
+            bg_score -= 25.0
     word_score = sum(text.count(w) * 1.5 for w in _COMMON_WORDS if len(w) >= 2)
     return freq_score + bg_score + word_score
 
 
-def crack_affine_cipher(ciphertext: str, alphabet: Optional[Alphabet] = None, top_n: int = 5) -> List[Tuple[float, Tuple[int, int], str, str]]:
+def crack_affine_cipher(
+    ciphertext: str, alphabet: Optional[Alphabet] = None, top_n: int = 5
+) -> List[Tuple[float, Tuple[int, int], str, str]]:
     alpha = alphabet or DEFAULT_ALPHABET
     cipher = AffineCipher(alpha)
     hypotheses = generate_hypotheses_systems(ciphertext, alpha)
@@ -527,7 +637,8 @@ def crack_affine_cipher(ciphertext: str, alphabet: Optional[Alphabet] = None, to
     seen = set()
     for h in hypotheses:
         for a, b in h["valid_keys"]:
-            if (a, b) in seen: continue
+            if (a, b) in seen:
+                continue
             seen.add((a, b))
             dec_text = cipher.decrypt(ciphertext, a, b)
             score = score_russian_text(dec_text)

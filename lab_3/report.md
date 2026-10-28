@@ -203,12 +203,9 @@ def analyze(text: str) -> list[GramStatistics]:
         raise ValueError("После предобработки не осталось букв выбранного языка.")
     results = []
     for k in range(1, 6):
-        counts = Counter(text[i:i + k] for i in range(len(text) - k + 1))
+        counts = Counter(text[i : i + k] for i in range(len(text) - k + 1))
         total = sum(counts.values())
-        entropy = (
-            -fsum((n / total) * log2(n / total) for n in counts.values())
-            if total else None
-        )
+        entropy = -fsum((n / total) * log2(n / total) for n in counts.values()) if total else None
         results.append(GramStatistics(k, counts, total, entropy))
     return results
 ```
@@ -234,15 +231,23 @@ VARIANT = Path(__file__).resolve().parent / "texts" / "variant_16.txt"
 def save_plot(results, path: Path) -> None:
     """Сохранить ломаную Hk/k в PNG без открытия графического окна."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=(7, 4.2))
-    ax.plot([r.k for r in results],
-            [r.normalized if r.normalized is not None else float("nan")
-             for r in results], "o-", color="#215a96")
-    ax.set(xlabel="k", ylabel="Hₖ/k, бит/символ",
-           title="Энтропия k-грамм открытого текста", xticks=range(1, 6))
+    ax.plot(
+        [r.k for r in results],
+        [r.normalized if r.normalized is not None else float("nan") for r in results],
+        "o-",
+        color="#215a96",
+    )
+    ax.set(
+        xlabel="k",
+        ylabel="Hₖ/k, бит/символ",
+        title="Энтропия k-грамм открытого текста",
+        xticks=range(1, 6),
+    )
     ax.set_ylim(bottom=0)
     ax.grid(alpha=0.3)
     fig.tight_layout()
@@ -257,9 +262,11 @@ def run_analysis(text: str, language: str, output: Path = OUTPUT) -> Path:
     output.mkdir(parents=True, exist_ok=True)
     run_dir = output / datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
     run_dir.mkdir()
-    lines = [f"Язык: {language}; букв после обработки: {len(cleaned)}",
-             f"Очищенный текст: {cleaned}",
-             "Перекрывающиеся k-граммы, шаг 1."]
+    lines = [
+        f"Язык: {language}; букв после обработки: {len(cleaned)}",
+        f"Очищенный текст: {cleaned}",
+        "Перекрывающиеся k-граммы, шаг 1.",
+    ]
     with (run_dir / "frequencies.csv").open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["k", "gram", "count", "probability"])
@@ -275,8 +282,11 @@ def run_analysis(text: str, language: str, output: Path = OUTPUT) -> Path:
         writer.writerow(["k", "windows", "unique", "Hk", "Hk/k"])
         for r in results:
             writer.writerow([r.k, r.total, len(r.counts), r.entropy, r.normalized])
-            lines.append(f"{r.k}    {r.entropy:.8f}    {r.normalized:.8f}"
-                         if r.entropy is not None else f"{r.k}    нет данных")
+            lines.append(
+                f"{r.k}    {r.entropy:.8f}    {r.normalized:.8f}"
+                if r.entropy is not None
+                else f"{r.k}    нет данных"
+            )
     lines.append(f"Hk: {[r.entropy for r in results]}")
     lines.append(f"Hk/k: {[r.normalized for r in results]}")
     content = "\n".join(lines)
@@ -285,7 +295,14 @@ def run_analysis(text: str, language: str, output: Path = OUTPUT) -> Path:
     save_plot(results, run_dir / "entropy.png")
     (run_dir / "input.txt").write_text(text, encoding="utf-8")
     # Обновить удобные ссылки на последний расчёт и совместимость отчёта.
-    for name in ("analysis.txt", "prepared.txt", "frequencies.csv", "entropy.csv", "entropy.png", "input.txt"):
+    for name in (
+        "analysis.txt",
+        "prepared.txt",
+        "frequencies.csv",
+        "entropy.csv",
+        "entropy.png",
+        "input.txt",
+    ):
         shutil.copy2(run_dir / name, output / name)
     print(content)
     print(f"\nРезультаты этого расчёта сохранены: {run_dir.resolve()}")
@@ -304,6 +321,7 @@ def main() -> None:
             run_analysis(read_text_file(str(args.file)), args.language, args.output)
         else:
             from lab_3.tui import EntropyApp
+
             EntropyApp(output=args.output, language=args.language).run()
     except (OSError, UnicodeError, ValueError) as exc:
         parser.exit(1, f"Ошибка: {exc}\n")
@@ -329,7 +347,19 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.events import Resize
-from textual.widgets import Button, Collapsible, DataTable, Footer, Header, Input, Select, Static, TabPane, TabbedContent, TextArea
+from textual.widgets import (
+    Button,
+    Collapsible,
+    DataTable,
+    Footer,
+    Header,
+    Input,
+    Select,
+    Static,
+    TabPane,
+    TabbedContent,
+    TextArea,
+)
 from textual_plotext import PlotextPlot
 
 from common.io_utils import read_text_file
@@ -378,12 +408,15 @@ class EntropyApp(App[None]):
     Footer { background: $panel; }
     """
 
-    BINDINGS = [("ctrl+enter", "analyze", "Анализировать"),
-                ("ctrl+o", "open_plot", "PNG-график"),
-                ("ctrl+q", "quit", "Выход")]
+    BINDINGS = [
+        ("ctrl+enter", "analyze", "Анализировать"),
+        ("ctrl+o", "open_plot", "PNG-график"),
+        ("ctrl+q", "quit", "Выход"),
+    ]
 
-    def __init__(self, initial_file: Path | None = None, output: Path = OUTPUT,
-                 language: str = "ru"):
+    def __init__(
+        self, initial_file: Path | None = None, output: Path = OUTPUT, language: str = "ru"
+    ):
         super().__init__()
         self.theme = "nord"
         self.initial_file = initial_file
@@ -396,33 +429,50 @@ class EntropyApp(App[None]):
     def compose(self) -> ComposeResult:
         yield Header()
         with Horizontal(id="toolbar"):
-            yield Select([("Русский", "ru"), ("English", "en")], value="ru",
-                         allow_blank=False, id="language")
+            yield Select(
+                [("Русский", "ru"), ("English", "en")], value="ru", allow_blank=False, id="language"
+            )
             yield Button("Посчитать", variant="primary", id="run")
             yield Button("Открыть вариант 16", id="example")
         with TabbedContent(initial="input-tab", id="main-views"):
             with TabPane("Текст", id="input-tab"):
-                yield Static("Вставьте текст ниже или загрузите его из файла.",
-                             id="input-hint")
-                yield TextArea(id="input-area", soft_wrap=True,
-                               show_line_numbers=False, placeholder="Введите или вставьте текст…")
-                with Collapsible(title="Обработанный текст", collapsed=True, id="prepared-collapse"):
-                    yield TextArea(read_only=True, soft_wrap=True, show_line_numbers=False,
-                                   id="prepared-area")
+                yield Static("Вставьте текст ниже или загрузите его из файла.", id="input-hint")
+                yield TextArea(
+                    id="input-area",
+                    soft_wrap=True,
+                    show_line_numbers=False,
+                    placeholder="Введите или вставьте текст…",
+                )
+                with Collapsible(
+                    title="Обработанный текст", collapsed=True, id="prepared-collapse"
+                ):
+                    yield TextArea(
+                        read_only=True, soft_wrap=True, show_line_numbers=False, id="prepared-area"
+                    )
                 with Horizontal(id="file-row"):
                     yield Input(placeholder="Путь к текстовому файлу", id="file-path")
                     yield Button("Загрузить файл", id="load")
                 with Horizontal(id="output-row"):
-                    yield Input(value=str(self.output), placeholder="Папка для отчёта и результатов", id="output-path")
+                    yield Input(
+                        value=str(self.output),
+                        placeholder="Папка для отчёта и результатов",
+                        id="output-path",
+                    )
             with TabPane("Результаты", id="results-tab"):
-                yield Static("Пока нет результатов. Нажмите «Посчитать» на вкладке «Текст».", id="summary")
+                yield Static(
+                    "Пока нет результатов. Нажмите «Посчитать» на вкладке «Текст».", id="summary"
+                )
                 with TabbedContent(initial="chart-tab", id="result-views"):
                     with TabPane("График Hₖ/k", id="chart-tab"):
                         yield PlotextPlot(id="chart")
                     with TabPane("Частоты k-грамм", id="frequency-tab"):
                         with Horizontal(id="k-filter"):
-                            yield Select([(f"k = {k}", k) for k in range(1, 6)],
-                                         value=1, allow_blank=False, id="k-select")
+                            yield Select(
+                                [(f"k = {k}", k) for k in range(1, 6)],
+                                value=1,
+                                allow_blank=False,
+                                id="k-select",
+                            )
                             yield Static("Отсортировано по частоте; список можно прокручивать.")
                         yield DataTable(id="gram-table", zebra_stripes=True, cursor_type="row")
         yield Static("", id="status")
@@ -505,10 +555,13 @@ class EntropyApp(App[None]):
         self.results = results
         self.last_run_dir = run_dir
         n = len(cleaned)
-        values = [f"{r.k}={r.normalized:.2f}" if r.normalized is not None
-                  else f"{r.k}:—" for r in results]
+        values = [
+            f"{r.k}={r.normalized:.2f}" if r.normalized is not None else f"{r.k}:—" for r in results
+        ]
         self.query_one("#summary", Static).update(
-            f"{language.upper()} · {n} букв · исключено: {len(raw) - n}  Hₖ/k: " + " · ".join(values))
+            f"{language.upper()} · {n} букв · исключено: {len(raw) - n}  Hₖ/k: "
+            + " · ".join(values)
+        )
         self.update_frequency_table(int(self.query_one("#k-select", Select).value))
         self.query_one("#main-views", TabbedContent).active = "results-tab"
         self.query_one("#result-views", TabbedContent).active = "chart-tab"
@@ -550,6 +603,7 @@ class EntropyApp(App[None]):
         path = self.last_run_dir / "entropy.png"
         try:
             import os
+
             os.startfile(str(path))
         except (AttributeError, OSError) as exc:
             self.set_status(f"Не удалось открыть PNG: {exc} · Файл: {path.resolve()}")
@@ -567,7 +621,8 @@ class EntropyApp(App[None]):
             table.add_row(gram, str(count), f"{count / result.total:.6f}")
         self.set_status(
             f"k={k} · окон: {result.total} · различных k-грамм: {len(result.counts)} · "
-            "таблица прокручивается колесом мыши или клавишами ↑/↓")
+            "таблица прокручивается колесом мыши или клавишами ↑/↓"
+        )
 
 
 def main() -> None:

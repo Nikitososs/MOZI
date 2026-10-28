@@ -29,7 +29,8 @@
 MOZI/
 ├── .venv/                      # Виртуальное окружение Python
 ├── .gitignore                  # Игнорируемые файлы Git
-├── requirements.txt            # Зависимости проекта (pytest)
+├── requirements.txt            # Зависимости приложения и тестов
+├── requirements-dev.txt        # Зависимости для разработки и форматирования
 ├── pytest.ini                  # Конфигурация запуска pytest
 ├── README.md                   # Документация репозитория
 ├── Математические основы защиты информации.pdf  # Методические указания к лабораторным работам
@@ -59,7 +60,7 @@ MOZI/
 │   └── tests/                  # Автоматические тесты pytest
 └── lab_4/                      # Лабораторная работа № 4: RSA
     ├── rsa.py                  # Арифметика RSA, ключи, кодирование и блоки
-    ├── main.py                 # Интерактивное меню из трёх пунктов
+    ├── main.py                 # Интерактивное меню
     ├── report.md, report.docx  # Отчёт варианта 16
     ├── outputs/                # Результаты шифрования/расшифрования
     └── tests/                  # Автоматические тесты pytest
@@ -83,6 +84,13 @@ MOZI/
    ```powershell
    pip install -r requirements.txt
    ```
+
+Для форматирования всех Python-модулей установите инструменты разработки и запустите Ruff:
+
+```powershell
+pip install -r requirements-dev.txt
+python -m ruff format .
+```
 
 ---
 

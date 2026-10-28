@@ -128,7 +128,9 @@ def generate_key_pairs(p: int, q: int, count: int = 3) -> list[KeyPair]:
 def encode_text(text: str) -> tuple[str, str]:
     """Нормализовать текст и вернуть (нормализованный текст, строку пар кодов)."""
     normalized: list[str] = []
-    canonical_input = text.upper().replace("Ё", "Е").replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
+    canonical_input = (
+        text.upper().replace("Ё", "Е").replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
+    )
     for char in canonical_input:
         if char in SYMBOL_TO_CODE:
             normalized.append(char)
@@ -136,8 +138,7 @@ def encode_text(text: str) -> tuple[str, str]:
             normalized.append(" ")
     canonical = "".join(normalized)
     digits = "".join(
-        f"{SPACE_CODE:02d}" if char == " " else f"{SYMBOL_TO_CODE[char]:02d}"
-        for char in canonical
+        f"{SPACE_CODE:02d}" if char == " " else f"{SYMBOL_TO_CODE[char]:02d}" for char in canonical
     )
     return canonical, digits
 
@@ -200,20 +201,22 @@ def decrypt_text(ciphertext: str, key: KeyPair) -> str:
         raise ValueError("Шифр-текст должен содержать только цифры.")
     decoded_digits: list[str] = []
     for offset in range(0, len(ciphertext), width):
-        cipher_block = int(ciphertext[offset:offset + width])
+        cipher_block = int(ciphertext[offset : offset + width])
         if cipher_block >= key.n:
             raise ValueError(f"Шифроблок {cipher_block} должен быть меньше n={key.n}.")
         plain_block = modular_power(cipher_block, key.d, key.n)
         block_digits = str(plain_block)
         if block_digits.startswith("0"):
-            raise ValueError("Расшифрованный блок начинается с нуля: неверный ключ или повреждённые данные.")
+            raise ValueError(
+                "Расшифрованный блок начинается с нуля: неверный ключ или повреждённые данные."
+            )
         decoded_digits.append(block_digits)
     digit_stream = "".join(decoded_digits)
     if len(digit_stream) % 2:
         raise ValueError("Объединённая строка кодов должна содержать чётное число цифр.")
     decoded: list[str] = []
     for pair_start in range(0, len(digit_stream), 2):
-        code = int(digit_stream[pair_start:pair_start + 2])
+        code = int(digit_stream[pair_start : pair_start + 2])
         if code == SPACE_CODE:
             decoded.append(" ")
         elif code in CODE_TO_SYMBOL:

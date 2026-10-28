@@ -142,7 +142,7 @@ class Alphabet:
         name: str,
         symbols: str,
         normalize_map: Optional[Dict[str, str]] = None,
-        case_sensitive: bool = False
+        case_sensitive: bool = False,
     ):
         self.name = name
         self.symbols = symbols
@@ -172,11 +172,7 @@ class Alphabet:
         return self.E_k(y, -k)
 
     def encrypt_symbol(
-        self,
-        char: str,
-        k: int,
-        case_mode: str = "lower",
-        preserve_case: Optional[bool] = None
+        self, char: str, k: int, case_mode: str = "lower", preserve_case: Optional[bool] = None
     ) -> str:
         if preserve_case is not None:
             case_mode = "preserve" if preserve_case else "lower"
@@ -195,16 +191,14 @@ class Alphabet:
         return char
 
     def decrypt_symbol(
-        self,
-        char: str,
-        k: int,
-        case_mode: str = "lower",
-        preserve_case: Optional[bool] = None
+        self, char: str, k: int, case_mode: str = "lower", preserve_case: Optional[bool] = None
     ) -> str:
         return self.encrypt_symbol(char, -k, case_mode=case_mode, preserve_case=preserve_case)
 
     def prepare_canonical_text(self, text: str) -> str:
-        return "".join(self.normalize_char(c) for c in text if self.normalize_char(c) in self.char_to_code)
+        return "".join(
+            self.normalize_char(c) for c in text if self.normalize_char(c) in self.char_to_code
+        )
 
     def encrypt(
         self,
@@ -212,7 +206,7 @@ class Alphabet:
         k: int,
         filter_non_alpha: bool = False,
         case_mode: str = "lower",
-        preserve_case: Optional[bool] = None
+        preserve_case: Optional[bool] = None,
     ) -> str:
         if preserve_case is not None:
             case_mode = "preserve" if preserve_case else "lower"
@@ -222,24 +216,16 @@ class Alphabet:
         return "".join(self.encrypt_symbol(c, k, case_mode=case_mode) for c in text)
 
     def decrypt(
-        self,
-        text: str,
-        k: int,
-        case_mode: str = "lower",
-        preserve_case: Optional[bool] = None
+        self, text: str, k: int, case_mode: str = "lower", preserve_case: Optional[bool] = None
     ) -> str:
-        return self.encrypt(text, -k, filter_non_alpha=False, case_mode=case_mode, preserve_case=preserve_case)
+        return self.encrypt(
+            text, -k, filter_non_alpha=False, case_mode=case_mode, preserve_case=preserve_case
+        )
 
     def brute_force(
-        self,
-        ciphertext: str,
-        filter_non_alpha: bool = False,
-        case_mode: str = "lower"
+        self, ciphertext: str, filter_non_alpha: bool = False, case_mode: str = "lower"
     ) -> List[Tuple[int, str]]:
-        return [
-            (k, self.decrypt(ciphertext, k, case_mode=case_mode))
-            for k in range(1, self.power)
-        ]
+        return [(k, self.decrypt(ciphertext, k, case_mode=case_mode)) for k in range(1, self.power)]
 ```
 
 # ЗАКЛЮЧЕНИЕ

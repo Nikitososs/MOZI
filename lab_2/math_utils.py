@@ -70,9 +70,11 @@ def mod_inverse(a: int, m: int) -> Tuple[bool, Optional[int], Optional[int], str
     else:
         step_str = f"коэффициент Безу u = {u}"
 
-    return True, u, pos_inv, (
-        f"Обратимо: {step_str}; "
-        f"наименьший положительный вычет a^(-1) = {pos_inv}"
+    return (
+        True,
+        u,
+        pos_inv,
+        (f"Обратимо: {step_str}; наименьший положительный вычет a^(-1) = {pos_inv}"),
     )
 
 
@@ -98,7 +100,7 @@ def solve_linear_congruence(a: int, b: int, m: int) -> Tuple[int, List[int], str
         return (
             1,
             [],
-            f"1. Решений нет: свободный член b={b} (mod {m}) не делится на НОД(a, m) = {d}"
+            f"1. Решений нет: свободный член b={b} (mod {m}) не делится на НОД(a, m) = {d}",
         )
 
     # Приводим к эквивалентному сравнению: (a/d) * x ≡ (b/d) (mod m/d)
@@ -112,26 +114,18 @@ def solve_linear_congruence(a: int, b: int, m: int) -> Tuple[int, List[int], str
     solutions = sorted([(x0 + k * m_prime) % m for k in range(d)])
 
     if d == 1:
-        return (
-            2,
-            solutions,
-            f"2. Решение одно по модулю {m}: x ≡ {solutions[0]} (mod {m})"
-        )
+        return (2, solutions, f"2. Решение одно по модулю {m}: x ≡ {solutions[0]} (mod {m})")
     else:
         sols_str = ", ".join(map(str, solutions))
         return (
             3,
             solutions,
-            f"3. Несколько решений (всего {d} реш. по модулю {m}): x ∈ {{{sols_str}}}"
+            f"3. Несколько решений (всего {d} реш. по модулю {m}): x ∈ {{{sols_str}}}",
         )
 
 
 def solve_system_congruences(
-    a: int,
-    b: int,
-    c: int,
-    d: int,
-    m: int
+    a: int, b: int, c: int, d: int, m: int
 ) -> Tuple[int, List[Tuple[int, int]], str]:
     """
     Решение системы линейных сравнений вида:
@@ -164,7 +158,7 @@ def solve_system_congruences(
         return (
             1,
             [],
-            f"1. Решений нет: разностное сравнение ({a} - {c})x ≡ ({b} - {d}) (mod {m}) неразрешимо"
+            f"1. Решений нет: разностное сравнение ({a} - {c})x ≡ ({b} - {d}) (mod {m}) неразрешимо",
         )
 
     pairs: List[Tuple[int, int]] = []
@@ -175,16 +169,12 @@ def solve_system_congruences(
     if st == 2:
         x0, y0 = pairs[0]
         gcd_x = math.gcd(x0, m)
-        inv_note = " (обратимо, допустимый ключ)" if gcd_x == 1 else f" (необратимо, т.к. НОД(x,m)={gcd_x})"
-        return (
-            2,
-            pairs,
-            f"2. Одно решение: x={x0}{inv_note}, y={y0}"
+        inv_note = (
+            " (обратимо, допустимый ключ)"
+            if gcd_x == 1
+            else f" (необратимо, т.к. НОД(x,m)={gcd_x})"
         )
+        return (2, pairs, f"2. Одно решение: x={x0}{inv_note}, y={y0}")
     else:
         pairs_str = ", ".join(f"(x={x}, y={y})" for x, y in pairs)
-        return (
-            3,
-            pairs,
-            f"3. Много решений (всего {len(pairs)} пар): {pairs_str}"
-        )
+        return (3, pairs, f"3. Много решений (всего {len(pairs)} пар): {pairs_str}")

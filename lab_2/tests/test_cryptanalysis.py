@@ -5,7 +5,7 @@ from lab_2.cryptanalysis import (
     frequency_analysis,
     generate_hypotheses_systems,
     score_russian_text,
-    crack_affine_cipher
+    crack_affine_cipher,
 )
 from lab_2.cipher import brute_force
 
@@ -107,7 +107,9 @@ class TestCryptanalysis:
         ct_en = encrypt(sample_en, key_a, key_b, alphabet=EN_ALPHABET)
 
         # Проверим генерацию гипотез с EN_ALPHABET
-        hyps = generate_hypotheses_systems(ct_en, alphabet=EN_ALPHABET, top_ct_count=5, top_pt_count=5)
+        hyps = generate_hypotheses_systems(
+            ct_en, alphabet=EN_ALPHABET, top_ct_count=5, top_pt_count=5
+        )
         all_keys = [k for h in hyps for k in h["valid_keys"]]
         assert (key_a, key_b) in all_keys
 
@@ -128,4 +130,3 @@ class TestCryptanalysis:
         assert "Расширенный алгоритм Евклида" in log_content
         assert "ИТОГОВЫЙ РЕЙТИНГ ДОПУСТИМЫХ КЛЮЧЕЙ" in log_content
         assert "a=27, b=13" in log_content
-

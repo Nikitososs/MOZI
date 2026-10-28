@@ -7,25 +7,28 @@ from lab_2.math_utils import (
     extended_gcd,
     mod_inverse,
     solve_linear_congruence,
-    solve_system_congruences
+    solve_system_congruences,
 )
 
 
 class TestExtendedEuclid:
     """Тестирование расширенного алгоритма Евклида."""
 
-    @pytest.mark.parametrize("a, b", [
-        (27, 32),
-        (9, 32),
-        (14, 32),
-        (5, 32),
-        (100, 35),
-        (17, 19),
-        (48, 18),
-        (1, 1),
-        (0, 5),
-        (7, 0)
-    ])
+    @pytest.mark.parametrize(
+        "a, b",
+        [
+            (27, 32),
+            (9, 32),
+            (14, 32),
+            (5, 32),
+            (100, 35),
+            (17, 19),
+            (48, 18),
+            (1, 1),
+            (0, 5),
+            (7, 0),
+        ],
+    )
     def test_bezout_identity(self, a, b):
         d, u, v = extended_gcd(a, b)
         expected_gcd = math.gcd(a, b)
@@ -36,24 +39,27 @@ class TestExtendedEuclid:
 class TestModInverse:
     """Тестирование вычисления мультипликативно обратного элемента."""
 
-    @pytest.mark.parametrize("a, m, expected_inv", [
-        (1, 32, 1),
-        (3, 32, 11),
-        (5, 32, 13),
-        (7, 32, 23),
-        (9, 32, 25),
-        (11, 32, 3),
-        (13, 32, 5),
-        (15, 32, 15),
-        (17, 32, 17),
-        (19, 32, 27),
-        (21, 32, 29),
-        (23, 32, 7),
-        (25, 32, 9),
-        (27, 32, 19),
-        (29, 32, 21),
-        (31, 32, 31),
-    ])
+    @pytest.mark.parametrize(
+        "a, m, expected_inv",
+        [
+            (1, 32, 1),
+            (3, 32, 11),
+            (5, 32, 13),
+            (7, 32, 23),
+            (9, 32, 25),
+            (11, 32, 3),
+            (13, 32, 5),
+            (15, 32, 15),
+            (17, 32, 17),
+            (19, 32, 27),
+            (21, 32, 29),
+            (23, 32, 7),
+            (25, 32, 9),
+            (27, 32, 19),
+            (29, 32, 21),
+            (31, 32, 31),
+        ],
+    )
     def test_invertible_elements(self, a, m, expected_inv):
         is_inv, u, pos_inv, desc = mod_inverse(a, m)
         assert is_inv is True
@@ -76,20 +82,22 @@ class TestModInverse:
         assert pos_inv == 19
         assert "-13" in desc and "19" in desc
 
-
-    @pytest.mark.parametrize("a, m", [
-        (2, 32),
-        (4, 32),
-        (6, 32),
-        (8, 32),
-        (10, 32),
-        (12, 32),
-        (14, 32),
-        (16, 32),
-        (18, 32),
-        (20, 32),
-        (0, 32)
-    ])
+    @pytest.mark.parametrize(
+        "a, m",
+        [
+            (2, 32),
+            (4, 32),
+            (6, 32),
+            (8, 32),
+            (10, 32),
+            (12, 32),
+            (14, 32),
+            (16, 32),
+            (18, 32),
+            (20, 32),
+            (0, 32),
+        ],
+    )
     def test_non_invertible_elements(self, a, m):
         is_inv, u, pos_inv, desc = mod_inverse(a, m)
         assert is_inv is False
@@ -170,4 +178,3 @@ class TestSolveSystemCongruences:
         st, sols, _ = solve_system_congruences(14, 7, 5, 20, 32)
         assert st == 2
         assert sols == [(27, 13)]
-

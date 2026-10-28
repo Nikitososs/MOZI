@@ -58,9 +58,11 @@ def show_keys(p: int, q: int) -> list[KeyPair] | None:
     print(f"\nn = p·q = {first.n}; φ(n) = (p−1)(q−1) = {first.phi}")
     print("№   Открытый ключ (e, n)       Закрытый ключ (d, n)       Проверка e·d mod φ(n)")
     for index, key in enumerate(keys, start=1):
-        print(f"{index:<3} ({key.e}, {key.n}){(20 - len(str(key.e)) - len(str(key.n))) * ' '}"
-              f"({key.d}, {key.n}){(20 - len(str(key.d)) - len(str(key.n))) * ' '}"
-              f"{(key.e * key.d) % key.phi}")
+        print(
+            f"{index:<3} ({key.e}, {key.n}){(20 - len(str(key.e)) - len(str(key.n))) * ' '}"
+            f"({key.d}, {key.n}){(20 - len(str(key.d)) - len(str(key.n))) * ' '}"
+            f"{(key.e * key.d) % key.phi}"
+        )
     return keys
 
 
@@ -80,7 +82,7 @@ def arithmetic_menu() -> None:
                 continue
             divisor, x, y = extended_gcd(a, b)
             print(f"НОД({a}, {b}) = {divisor}; коэффициенты Безу: x={x}, y={y}.")
-            print(f"Проверка: {a}·({x}) + {b}·({y}) = {a*x + b*y}.")
+            print(f"Проверка: {a}·({x}) + {b}·({y}) = {a * x + b * y}.")
             value = read_int("Число для нахождения обратного")
             if value is None:
                 continue
@@ -89,7 +91,9 @@ def arithmetic_menu() -> None:
                 continue
             try:
                 inverse = mod_inverse(value, modulus)
-                print(f"{value}^(-1) mod {modulus} = {inverse}; проверка: {value*inverse % modulus}.")
+                print(
+                    f"{value}^(-1) mod {modulus} = {inverse}; проверка: {value * inverse % modulus}."
+                )
             except ValueError as error:
                 print(f"Обратный элемент не найден: {error}")
         elif choice == "2":
@@ -106,8 +110,15 @@ def arithmetic_menu() -> None:
             print("Выберите 1, 2 или 0.")
 
 
-def save_demo(plaintext: str, encoded: str, blocks: tuple[int, ...], cipher_blocks: tuple[int, ...],
-              ciphertext: str, decoded: str, key: KeyPair) -> Path:
+def save_demo(
+    plaintext: str,
+    encoded: str,
+    blocks: tuple[int, ...],
+    cipher_blocks: tuple[int, ...],
+    ciphertext: str,
+    decoded: str,
+    key: KeyPair,
+) -> Path:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     path = OUTPUT_DIR / "rsa_result.txt"
     report = (
@@ -146,7 +157,9 @@ def run_text_roundtrip(raw: str, keys: list[KeyPair]) -> None:
         if decoded != result.plaintext:
             raise ValueError("Расшифрованный текст не совпал с исходным.")
         print("Проверка пройдена: открытый текст восстановлен без изменений.")
-        print(f"Результат сохранён: {save_demo(result.plaintext, result.encoded_digits, result.plaintext_blocks, result.ciphertext_blocks, result.ciphertext, decoded, key)}")
+        print(
+            f"Результат сохранён: {save_demo(result.plaintext, result.encoded_digits, result.plaintext_blocks, result.ciphertext_blocks, result.ciphertext, decoded, key)}"
+        )
     except ValueError as error:
         print(f"Ошибка: {error}")
 

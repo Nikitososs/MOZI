@@ -68,15 +68,11 @@ def format_encryption_record(
     result_text: str,
     key: Any,
     cipher_name: str = "ШИФР ЦЕЗАРЯ",
-    is_decryption: bool = False
+    is_decryption: bool = False,
 ) -> str:
     if not is_decryption:
         # В шифрованном файле хранятся только ключ и результат шифрования (шифровка)
-        return (
-            f"=== ШИФРОВАНИЕ ({cipher_name}) ===\n"
-            f"КЛЮЧ: {key}\n"
-            f"ШИФР-ТЕКСТ (ШТ): {result_text}\n"
-        )
+        return f"=== ШИФРОВАНИЕ ({cipher_name}) ===\nКЛЮЧ: {key}\nШИФР-ТЕКСТ (ШТ): {result_text}\n"
     return (
         f"=== РАСШИФРОВАНИЕ ({cipher_name}) ===\n"
         f"КЛЮЧ: {key}\n"
@@ -89,13 +85,13 @@ def format_bruteforce_records(
     ciphertext: str,
     variants: List[Tuple[Any, str]],
     title: str = "РЕЗУЛЬТАТЫ ПОЛНОГО ПЕРЕБОРА КЛЮЧЕЙ",
-    key_label: str = "Ключ k"
+    key_label: str = "Ключ k",
 ) -> str:
     lines = [
         f"=== {title} ===",
         f"Исходный ШТ: {ciphertext}\n",
         f"{key_label:<8} | {'Расшифрованный текст'}",
-        "-" * 80
+        "-" * 80,
     ]
     for k, dec_text in variants:
         lines.append(f"k = {str(k):<4} | {dec_text}")

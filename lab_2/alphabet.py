@@ -17,10 +17,12 @@ class Alphabet:
         name: str,
         symbols: str,
         normalize_map: Optional[Dict[str, str]] = None,
-        case_sensitive: bool = False
+        case_sensitive: bool = False,
     ):
         if len(symbols) < 2:
-            raise ValueError(f"Алфавит '{name}' должен содержать не менее 2 символов (получено: {len(symbols)})")
+            raise ValueError(
+                f"Алфавит '{name}' должен содержать не менее 2 символов (получено: {len(symbols)})"
+            )
         self.name = name
         self.symbols = symbols
         self.power = len(symbols)
@@ -49,47 +51,36 @@ class Alphabet:
 
     def prepare_canonical_text(self, text: str) -> str:
         """Извлечение только символов алфавита в нижнем регистре (без пробелов и знаков)."""
-        return "".join(self.normalize_char(c) for c in text if self.normalize_char(c) in self.char_to_code)
+        return "".join(
+            self.normalize_char(c) for c in text if self.normalize_char(c) in self.char_to_code
+        )
 
     def encrypt(
-        self,
-        text: str,
-        a: int,
-        b: int,
-        filter_non_alpha: bool = False,
-        case_mode: str = "lower"
+        self, text: str, a: int, b: int, filter_non_alpha: bool = False, case_mode: str = "lower"
     ) -> str:
         """Удобная обертка для шифрования данным алфавитом."""
         from lab_2.cipher import AffineCipher
-        return AffineCipher(self).encrypt(text, a, b, filter_non_alpha=filter_non_alpha, case_mode=case_mode)
 
-    def decrypt(
-        self,
-        text: str,
-        a: int,
-        b: int,
-        case_mode: str = "lower"
-    ) -> str:
+        return AffineCipher(self).encrypt(
+            text, a, b, filter_non_alpha=filter_non_alpha, case_mode=case_mode
+        )
+
+    def decrypt(self, text: str, a: int, b: int, case_mode: str = "lower") -> str:
         """Удобная обертка для расшифрования данным алфавитом."""
         from lab_2.cipher import AffineCipher
+
         return AffineCipher(self).decrypt(text, a, b, case_mode=case_mode)
 
 
 RU_ALPHABET = Alphabet(
     name="Русский (ru, m=32, е/ё)",
     symbols="абвгдежзийклмнопрстуфхцчшщъыьэюя",
-    normalize_map={"ё": "е"}
+    normalize_map={"ё": "е"},
 )
 
-EN_ALPHABET = Alphabet(
-    name="English (en, m=26)",
-    symbols="abcdefghijklmnopqrstuvwxyz"
-)
+EN_ALPHABET = Alphabet(name="English (en, m=26)", symbols="abcdefghijklmnopqrstuvwxyz")
 
-PRESETS: Dict[str, Alphabet] = {
-    "ru": RU_ALPHABET,
-    "en": EN_ALPHABET
-}
+PRESETS: Dict[str, Alphabet] = {"ru": RU_ALPHABET, "en": EN_ALPHABET}
 
 
 def register_alphabet(key: str, alphabet: Alphabet) -> None:
@@ -140,7 +131,7 @@ RUSSIAN_FREQUENCIES: List[Tuple[str, float]] = [
     ("щ", 0.003),
     ("э", 0.003),
     ("ф", 0.002),
-    ("ъ", 0.001)
+    ("ъ", 0.001),
 ]
 
 # Таблица эталонных частот букв английского языка (отсортированная по убыванию)
@@ -170,7 +161,7 @@ ENGLISH_FREQUENCIES: List[Tuple[str, float]] = [
     ("j", 0.002),
     ("x", 0.002),
     ("q", 0.001),
-    ("z", 0.001)
+    ("z", 0.001),
 ]
 
 

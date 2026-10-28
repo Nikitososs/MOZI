@@ -30,11 +30,7 @@ if sys.stdin.encoding and sys.stdin.encoding.lower() != "utf-8":
         pass
 
 import affine_cipher as ac
-from common.io_utils import (
-    save_text_file,
-    read_text_file,
-    load_text_from_file_or_record
-)
+from common.io_utils import save_text_file, read_text_file, load_text_from_file_or_record
 from variants import VARIANTS_DB
 
 OUTPUTS_DIR = os.path.join(CURRENT_DIR, "outputs")
@@ -142,6 +138,7 @@ def prompt_case_mode(is_encryption: bool = True) -> Optional[Tuple[str, bool]]:
 # ОБРАБОТЧИКИ МАТЕМАТИЧЕСКОГО АППАРАТА
 # =====================================================================
 
+
 def handle_extended_gcd() -> None:
     print("\n--- РАСШИРЕННЫЙ АЛГОРИТМ ЕВКЛИДА ---")
     print("Вычисляет d = НОД(a, b) и коэффициенты Безу u, v такие, что a*u + b*v = d.")
@@ -187,7 +184,9 @@ def handle_mod_inverse() -> None:
         if u is not None and u < 0:
             k = (-u + m - 1) // m
             shift_expr = f"{m}" if k == 1 else f"{k}*{m}"
-            print(f"Преобразование к наименьшему положительному вычету (u < 0): {u} + {shift_expr} = {pos_inv}")
+            print(
+                f"Преобразование к наименьшему положительному вычету (u < 0): {u} + {shift_expr} = {pos_inv}"
+            )
         print(f"Наименьший положительный вычет обратного элемента a^(-1): {pos_inv}")
         print(f"Проверка: ({a} * {pos_inv}) mod {m} = {(a * pos_inv) % m}")
     print("=" * 50)
@@ -258,8 +257,8 @@ def handle_solve_system() -> None:
     elif st == 2:
         x0, y0 = sols[0]
         print(f"Результат: 2. Одно решение: (x = {x0}, y = {y0})")
-        print(f"Проверка ур. 1: ({a}*{x0} + {y0}) mod {m} = {(a*x0 + y0) % m} (== {b % m})")
-        print(f"Проверка ур. 2: ({c}*{x0} + {y0}) mod {m} = {(c*x0 + y0) % m} (== {d % m})")
+        print(f"Проверка ур. 1: ({a}*{x0} + {y0}) mod {m} = {(a * x0 + y0) % m} (== {b % m})")
+        print(f"Проверка ур. 2: ({c}*{x0} + {y0}) mod {m} = {(c * x0 + y0) % m} (== {d % m})")
     elif st == 3:
         print(f"Результат: 3. Много решений (всего {len(sols)}):")
         for idx, (x, y) in enumerate(sols, 1):
@@ -275,9 +274,15 @@ def handle_math_submenu() -> None:
         print_banner()
         print("\n--- РАЗДЕЛ: МАТЕМАТИЧЕСКИЙ АППАРАТ ---")
         print("1. Расширенный алгоритм Евклида (вход: a, b -> выход: d, u, v)")
-        print("2. Нахождение обратного элемента (вход: a, m -> 1. Необратимо / 2. Коэф. Безу и наименьший положительный вычет)")
-        print("3. Решение сравнения ax ≡ b (mod m) (вход: a, b, m -> 1. Решений нет / 2. Одно / 3. Несколько)")
-        print("4. Решение системы сравнений (вход: a, b, c, d, m -> 1. Решений нет / 2. Одно / 3. Много)")
+        print(
+            "2. Нахождение обратного элемента (вход: a, m -> 1. Необратимо / 2. Коэф. Безу и наименьший положительный вычет)"
+        )
+        print(
+            "3. Решение сравнения ax ≡ b (mod m) (вход: a, b, m -> 1. Решений нет / 2. Одно / 3. Несколько)"
+        )
+        print(
+            "4. Решение системы сравнений (вход: a, b, c, d, m -> 1. Решений нет / 2. Одно / 3. Много)"
+        )
         print("0. Вернуться в главное меню")
 
         choice = input("\nВыберите действие (0-4): ").strip()
@@ -304,6 +309,7 @@ def handle_math_submenu() -> None:
 # ОБРАБОТЧИКИ ШИФРОВАНИЯ И РАСШИФРОВАНИЯ
 # =====================================================================
 
+
 def handle_encrypt() -> None:
     global last_used_key
     print(f"\n--- 1. ЗАШИФРОВАТЬ ТЕКСТ (Аффинный шифр, m={current_alphabet.power}) ---")
@@ -318,10 +324,12 @@ def handle_encrypt() -> None:
     a_red = a % m
     if a_red == 0 or ac.extended_gcd(a_red, m)[0] != 1:
         gcd_val = ac.extended_gcd(a_red, m)[0]
-        print(f">> Ошибка: коэффициент a={a} (a mod {m} = {a_red}) не взаимно прост с m={m} (НОД={gcd_val}). Обратного элемента нет!")
+        print(
+            f">> Ошибка: коэффициент a={a} (a mod {m} = {a_red}) не взаимно прост с m={m} (НОД={gcd_val}). Обратного элемента нет!"
+        )
         return
 
-    b = prompt_int(f"Введите вторую часть ключа b (0..{m-1})")
+    b = prompt_int(f"Введите вторую часть ключа b (0..{m - 1})")
     if b is None:
         return
     b %= m
@@ -341,7 +349,9 @@ def handle_encrypt() -> None:
     print(f"ШИФР-ТЕКСТ (ШТ):\n{encrypted_text}")
     print("=" * 60)
 
-    save_choice = input("\nСохранить зашифрованный текст в файл? (y/n, по умолчанию y): ").strip().lower()
+    save_choice = (
+        input("\nСохранить зашифрованный текст в файл? (y/n, по умолчанию y): ").strip().lower()
+    )
     if save_choice in ("", "y", "yes", "да"):
         default_file = os.path.join(OUTPUTS_DIR, "encrypted.txt")
         save_file = input(f"Путь к файлу [по умолчанию: {default_file}, 0 - отмена]: ").strip()
@@ -374,10 +384,12 @@ def handle_decrypt() -> None:
     a_red = a % m
     if a_red == 0 or ac.extended_gcd(a_red, m)[0] != 1:
         gcd_val = ac.extended_gcd(a_red, m)[0]
-        print(f">> Ошибка: коэффициент a={a} (a mod {m} = {a_red}) не взаимно прост с m={m} (НОД={gcd_val}). Обратного элемента нет!")
+        print(
+            f">> Ошибка: коэффициент a={a} (a mod {m} = {a_red}) не взаимно прост с m={m} (НОД={gcd_val}). Обратного элемента нет!"
+        )
         return
 
-    b = prompt_int(f"Введите вторую часть ключа b (0..{m-1})", default=def_b)
+    b = prompt_int(f"Введите вторую часть ключа b (0..{m - 1})", default=def_b)
     if b is None:
         return
     b %= m
@@ -394,7 +406,9 @@ def handle_decrypt() -> None:
     print(f"РАСШИФРОВАННЫЙ ТЕКСТ (ОТ):\n{decrypted_text}")
     print("=" * 60)
 
-    save_choice = input("\nСохранить расшифрованный текст в файл? (y/n, по умолчанию y): ").strip().lower()
+    save_choice = (
+        input("\nСохранить расшифрованный текст в файл? (y/n, по умолчанию y): ").strip().lower()
+    )
     if save_choice in ("", "y", "yes", "да"):
         default_file = os.path.join(OUTPUTS_DIR, "decrypted.txt")
         save_file = input(f"Путь к файлу [по умолчанию: {default_file}, 0 - отмена]: ").strip()
@@ -419,8 +433,12 @@ def handle_cryptanalysis() -> None:
 
     fa = ac.frequency_analysis(text, current_alphabet)
     if fa["total_alpha_chars"] == 0:
-        print(f"\n>> Ошибка: в тексте нет символов выбранного алфавита ('{current_alphabet.name}').")
-        print(">> Частотный анализ невозможен. Проверьте правильность введенного текста или активного алфавита.")
+        print(
+            f"\n>> Ошибка: в тексте нет символов выбранного алфавита ('{current_alphabet.name}')."
+        )
+        print(
+            ">> Частотный анализ невозможен. Проверьте правильность введенного текста или активного алфавита."
+        )
         return
 
     print("\n" + "=" * 65)
@@ -432,14 +450,22 @@ def handle_cryptanalysis() -> None:
     print("=" * 65)
 
     print("\nВыдвижение гипотез на основе систем сравнений...")
-    print("Фиксируются 2 наиболее частых символа шифр-текста, перебираются эталонные частоты алфавита по убыванию:")
-    hypotheses = ac.generate_hypotheses_systems(text, current_alphabet, top_ct_count=2, top_pt_count=6)
+    print(
+        "Фиксируются 2 наиболее частых символа шифр-текста, перебираются эталонные частоты алфавита по убыванию:"
+    )
+    hypotheses = ac.generate_hypotheses_systems(
+        text, current_alphabet, top_ct_count=2, top_pt_count=6
+    )
     valid_hypotheses = [h for h in hypotheses if h["valid_keys"]]
 
-    print(f"Всего проверено систем: {len(hypotheses)}, систем с допустимыми ключами: {len(valid_hypotheses)}")
+    print(
+        f"Всего проверено систем: {len(hypotheses)}, систем с допустимыми ключами: {len(valid_hypotheses)}"
+    )
 
     if not valid_hypotheses:
-        print("\n>> Предупреждение: не удалось составить разрешимые системы сравнений с допустимыми ключами.")
+        print(
+            "\n>> Предупреждение: не удалось составить разрешимые системы сравнений с допустимыми ключами."
+        )
         print(">> Текст слишком короткий либо не содержит достаточного разнообразия символов.")
         return
 
@@ -469,7 +495,13 @@ def handle_cryptanalysis() -> None:
     best_sc, best_a, best_b, best_mapping, best_dec = evaluated[0]
     print(f"\n>> Рекомендуемый ключ: a = {best_a}, b = {best_b} ({best_mapping})")
 
-    save_log = input("\nСохранить детальный математический протокол решения всех систем в файл? (y/n, по умолчанию n): ").strip().lower()
+    save_log = (
+        input(
+            "\nСохранить детальный математический протокол решения всех систем в файл? (y/n, по умолчанию n): "
+        )
+        .strip()
+        .lower()
+    )
     if save_log in ("y", "yes", "да"):
         default_log_file = os.path.join(OUTPUTS_DIR, "cryptanalysis_math_log.txt")
         log_file = input(f"Путь к файлу [по умолчанию: {default_log_file}, 0 - отмена]: ").strip()
@@ -515,7 +547,9 @@ def handle_variant_task() -> None:
     print(f"Найден ключ: a = {key_a}, b = {key_b}")
     d, u, _ = ac.extended_gcd(key_a, 32)
     step_note = f" (u = {u} < 0 => {u} + 32 = {a_inv})" if u < 0 else ""
-    print(f"Обратный элемент a^(-1) по модулю 32 (наименьший положительный вычет): {a_inv}{step_note}")
+    print(
+        f"Обратный элемент a^(-1) по модулю 32 (наименьший положительный вычет): {a_inv}{step_note}"
+    )
 
     print("\nРасшифрованный текст (ОТ):")
     print(pt)

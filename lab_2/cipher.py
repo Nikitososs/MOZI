@@ -26,9 +26,7 @@ class AffineCipher:
         """Проверка обратимости коэффициента a по модулю мощности алфавита и приведение ключа."""
         a_eff = a % self.power
         if a_eff == 0:
-            raise ValueError(
-                f"Коэффициент a={a} кратен модулю m={self.power} (необратим)"
-            )
+            raise ValueError(f"Коэффициент a={a} кратен модулю m={self.power} (необратим)")
         gcd_val = math.gcd(a_eff, self.power)
         if gcd_val != 1:
             raise ValueError(
@@ -55,13 +53,7 @@ class AffineCipher:
             raise ValueError(f"Коэффициент a={a} необратим по модулю m={self.power}")
         return (a_inv * (y - b)) % self.power
 
-    def encrypt_symbol(
-        self,
-        char: str,
-        a: int,
-        b: int,
-        case_mode: str = "lower"
-    ) -> str:
+    def encrypt_symbol(self, char: str, a: int, b: int, case_mode: str = "lower") -> str:
         """Шифрование одного символа."""
         norm = self.alphabet.normalize_char(char)
         if norm in self.alphabet.char_to_code:
@@ -77,13 +69,7 @@ class AffineCipher:
             return res_char.lower()
         return char
 
-    def decrypt_symbol(
-        self,
-        char: str,
-        a: int,
-        b: int,
-        case_mode: str = "lower"
-    ) -> str:
+    def decrypt_symbol(self, char: str, a: int, b: int, case_mode: str = "lower") -> str:
         """Расшифрование одного символа."""
         norm = self.alphabet.normalize_char(char)
         if norm in self.alphabet.char_to_code:
@@ -100,12 +86,7 @@ class AffineCipher:
         return char
 
     def encrypt(
-        self,
-        text: str,
-        a: int,
-        b: int,
-        filter_non_alpha: bool = False,
-        case_mode: str = "lower"
+        self, text: str, a: int, b: int, filter_non_alpha: bool = False, case_mode: str = "lower"
     ) -> str:
         """Шифрование строки текста."""
         if filter_non_alpha:
@@ -113,13 +94,7 @@ class AffineCipher:
             return "".join(self.encrypt_symbol(c, a, b, case_mode="lower") for c in src)
         return "".join(self.encrypt_symbol(c, a, b, case_mode=case_mode) for c in text)
 
-    def decrypt(
-        self,
-        text: str,
-        a: int,
-        b: int,
-        case_mode: str = "lower"
-    ) -> str:
+    def decrypt(self, text: str, a: int, b: int, case_mode: str = "lower") -> str:
         """Расшифрование строки текста."""
         return "".join(self.decrypt_symbol(c, a, b, case_mode=case_mode) for c in text)
 
@@ -147,26 +122,21 @@ def encrypt(
     b: int,
     alphabet: Optional[Alphabet] = None,
     filter_non_alpha: bool = False,
-    case_mode: str = "lower"
+    case_mode: str = "lower",
 ) -> str:
     cipher = AffineCipher(alphabet) if alphabet else _default_cipher
     return cipher.encrypt(text, a, b, filter_non_alpha=filter_non_alpha, case_mode=case_mode)
 
 
 def decrypt(
-    text: str,
-    a: int,
-    b: int,
-    alphabet: Optional[Alphabet] = None,
-    case_mode: str = "lower"
+    text: str, a: int, b: int, alphabet: Optional[Alphabet] = None, case_mode: str = "lower"
 ) -> str:
     cipher = AffineCipher(alphabet) if alphabet else _default_cipher
     return cipher.decrypt(text, a, b, case_mode=case_mode)
 
 
 def brute_force(
-    ciphertext: str,
-    alphabet: Optional[Alphabet] = None
+    ciphertext: str, alphabet: Optional[Alphabet] = None
 ) -> List[Tuple[Tuple[int, int], str]]:
     cipher = AffineCipher(alphabet) if alphabet else _default_cipher
     return cipher.brute_force(ciphertext)
