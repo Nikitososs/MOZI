@@ -65,7 +65,7 @@ $$
 
 ## 3 Алгоритм и интерфейс программы
 
-Главное меню содержит ровно три пункта: «Проверка арифметики», «Шифровка/дешифровка» и «Выход». В первом пункте вычисляются НОД и коэффициенты Безу расширенным алгоритмом Евклида, обратный элемент и значение $a^k \bmod n$ бинарным методом. Во втором можно сформировать ключи для произвольных различных простых $p$ и $q$ или выполнить полный цикл обработки текста. Для варианта 16 поля $p$ и $q$ предлагают значения 167 и 311 по умолчанию.
+Главное меню содержит четыре пункта: «Проверка арифметики», «Шифровка/дешифровка», «Выполнение варианта 16» и «Выход». В первом пункте вычисляются НОД и коэффициенты Безу расширенным алгоритмом Евклида, обратный элемент и значение $a^k \bmod n$ бинарным методом. Во втором можно сформировать ключи и выполнить шифрование/расшифрование для введённых простых $p$ и $q$. Третий пункт запускает полный расчёт варианта 16 с параметрами $p=167$, $q=311$; пользователь вводит открытый текст, выбирает пару ключей, после чего программа показывает шифрование и расшифрование и сохраняет результат.
 
 Алгоритм полного цикла:
 
@@ -127,7 +127,7 @@ $$
 
 # ЗАКЛЮЧЕНИЕ
 
-Реализована программа для проверки основных арифметических операций RSA, формирования не менее трёх пар открытого и закрытого ключей по введённым простым числам, а также шифрования и расшифрования текстовой строки. Для варианта 16 использованы $p=167$, $q=311$, получены три пары ключей и выполнен полный цикл для текста «ВАСЯ МОЛОДЕЦ». Разбиение учитывает ограничение $M<n$ и требование отсутствия ведущего нуля; после обратного преобразования текст полностью восстановлен.
+Реализована программа с отдельными пунктами меню для арифметической проверки, произвольного шифрования/расшифрования и полного выполнения варианта 16. В пункте варианта используются $p=167$, $q=311$, формируются три пары ключей и выполняется полный цикл для введённого текста. В контрольном запуске для строки «ВАСЯ МОЛОДЕЦ» разбиение удовлетворяет ограничениям $M<n$ и отсутствия ведущего нуля, а после обратного преобразования текст полностью восстановлен.
 
 # СПИСОК ЛИТЕРАТУРЫ
 
@@ -498,6 +498,43 @@ def save_demo(plaintext: str, encoded: str, blocks: tuple[int, ...], cipher_bloc
     return path
 
 
+def run_text_roundtrip(raw: str, keys: list[KeyPair]) -> None:
+    """Шифровать и расшифровать введённый текст выбранной парой ключей."""
+    try:
+        key_number = read_int("Номер пары ключей для шифрования и расшифрования", 1)
+        if key_number is None:
+            return
+        if not 1 <= key_number <= len(keys):
+            raise ValueError(f"Номер пары должен быть от 1 до {len(keys)}.")
+        key = keys[key_number - 1]
+        result = encrypt_text(raw, key)
+        decoded = decrypt_text(result.ciphertext, key)
+        print(f"\nНормализованный открытый текст: {result.plaintext}")
+        print(f"Коды символов (пары цифр): {result.encoded_digits}")
+        print("Блоки M < n: " + " | ".join(map(str, result.plaintext_blocks)))
+        print("Шифроблоки C = M^e mod n: " + " | ".join(map(str, result.ciphertext_blocks)))
+        print(f"Шифр-текст (блоки конкатенированы): {result.ciphertext}")
+        print(f"После расшифрования: {decoded}")
+        if decoded != result.plaintext:
+            raise ValueError("Расшифрованный текст не совпал с исходным.")
+        print("Проверка пройдена: открытый текст восстановлен без изменений.")
+        print(f"Результат сохранён: {save_demo(result.plaintext, result.encoded_digits, result.plaintext_blocks, result.ciphertext_blocks, result.ciphertext, decoded, key)}")
+    except ValueError as error:
+        print(f"Ошибка: {error}")
+
+
+def execute_variant() -> None:
+    """Запустить полный расчёт варианта 16 отдельным пунктом главного меню."""
+    print("\nВЫПОЛНЕНИЕ ВАРИАНТА 16")
+    print(f"Используются заданные вариантом числа: p={DEFAULT_P}, q={DEFAULT_Q}.")
+    keys = show_keys(DEFAULT_P, DEFAULT_Q)
+    if not keys:
+        return
+    print(f"\nПреамбула допустимых символов: {ALPHABET} и пробел (99).")
+    print("Регистр приводится к верхнему, Ё заменяется на Е; прочие символы пропускаются.")
+    run_text_roundtrip(input("Введите открытый текст: "), keys)
+
+
 def encrypt_decrypt_menu() -> None:
     while True:
         print("\nШИФРОВАНИЕ И РАСШИФРОВАНИЕ")
@@ -519,28 +556,7 @@ def encrypt_decrypt_menu() -> None:
 
         print(f"\nПреамбула допустимых символов: {ALPHABET} и пробел (99).")
         print("Регистр приводится к верхнему, Ё заменяется на Е; прочие символы пропускаются.")
-        raw = input("Введите открытый текст: ")
-        try:
-            key_number = read_int("Номер пары ключей для шифрования и расшифрования", 1)
-            if key_number is None:
-                continue
-            if not 1 <= key_number <= len(keys):
-                raise ValueError(f"Номер пары должен быть от 1 до {len(keys)}.")
-            key = keys[key_number - 1]
-            result = encrypt_text(raw, key)
-            decoded = decrypt_text(result.ciphertext, key)
-            print(f"\nНормализованный открытый текст: {result.plaintext}")
-            print(f"Коды символов (пары цифр): {result.encoded_digits}")
-            print("Блоки M < n: " + " | ".join(map(str, result.plaintext_blocks)))
-            print("Шифроблоки C = M^e mod n: " + " | ".join(map(str, result.ciphertext_blocks)))
-            print(f"Шифр-текст (блоки конкатенированы): {result.ciphertext}")
-            print(f"После расшифрования: {decoded}")
-            if decoded != result.plaintext:
-                raise ValueError("Расшифрованный текст не совпал с исходным.")
-            print("Проверка пройдена: открытый текст восстановлен без изменений.")
-            print(f"Результат сохранён: {save_demo(result.plaintext, result.encoded_digits, result.plaintext_blocks, result.ciphertext_blocks, result.ciphertext, decoded, key)}")
-        except ValueError as error:
-            print(f"Ошибка: {error}")
+        run_text_roundtrip(input("Введите открытый текст: "), keys)
 
 
 def main() -> None:
@@ -549,17 +565,20 @@ def main() -> None:
         print("ЛАБОРАТОРНАЯ РАБОТА № 4 — ШИФРОВАНИЕ С ОТКРЫТЫМ КЛЮЧОМ RSA")
         print("1. Проверка арифметики")
         print("2. Шифровка/дешифровка")
-        print("3. Выход")
+        print("3. Выполнение варианта 16")
+        print("4. Выход")
         choice = input("Выберите пункт меню: ").strip()
         if choice == "1":
             arithmetic_menu()
         elif choice == "2":
             encrypt_decrypt_menu()
         elif choice == "3":
+            execute_variant()
+        elif choice == "4":
             print("Работа завершена.")
             return
         else:
-            print("Выберите 1, 2 или 3.")
+            print("Выберите 1, 2, 3 или 4.")
 
 
 if __name__ == "__main__":
