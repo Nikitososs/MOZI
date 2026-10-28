@@ -50,7 +50,17 @@ def test_mod_inverse_and_noninvertible_value():
 
 
 @pytest.mark.parametrize(
-    "number,expected", [(2, True), (311, True), (1, False), (221, False), (167 * 311, False)]
+    "number,expected",
+    [
+        (2, True),
+        (3, True),
+        (311, True),
+        (1, False),
+        (4, False),
+        (221, False),
+        (97 * 101, False),
+        (167 * 311, False),
+    ],
 )
 def test_is_prime(number, expected):
     assert is_prime(number) is expected

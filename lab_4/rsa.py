@@ -54,33 +54,19 @@ def modular_power(base: int, exponent: int, modulus: int) -> int:
 
 
 def is_prime(number: int) -> bool:
-    """Тест Миллера—Рабина; точен для n < 2**64, вероятностный выше."""
+    """Проверить простоту перебором делителей до квадратного корня числа."""
     if number < 2:
         return False
-    small_primes = (2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37)
-    for prime in small_primes:
-        if number == prime:
-            return True
-        if number % prime == 0:
+    if number == 2:
+        return True
+    if number % 2 == 0:
+        return False
+
+    divisor = 3
+    while divisor * divisor <= number:
+        if number % divisor == 0:
             return False
-    odd_part = number - 1
-    shifts = 0
-    while odd_part % 2 == 0:
-        shifts += 1
-        odd_part //= 2
-    bases = (2, 325, 9375, 28178, 450775, 9780504, 1795265022)
-    for base in bases:
-        if base % number == 0:
-            continue
-        residue = modular_power(base, odd_part, number)
-        if residue in (1, number - 1):
-            continue
-        for _ in range(shifts - 1):
-            residue = (residue * residue) % number
-            if residue == number - 1:
-                break
-        else:
-            return False
+        divisor += 2
     return True
 
 
