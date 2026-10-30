@@ -49,7 +49,7 @@ def format_result(result: AttackResult) -> str:
         "Лабораторная работа № 5 — криптоанализ RSA факторизацией модуля\n"
         f"{variant_label}"
         f"Открытый ключ (e, n): ({result.e}, {result.n})\n"
-        f"Факторизация n: p={result.p}, q={result.q}; проверок делителей: {result.division_checks}\n"
+        f"Факторизация n: p={result.p}, q={result.q}; итераций rho: {result.factorization_iterations}\n"
         f"φ(n) = (p−1)(q−1) = {result.phi}\n"
         f"Закрытый показатель: d={result.d}\n"
         f"Шифротекст: C={result.ciphertext}\n"
@@ -98,7 +98,7 @@ def math_check_menu() -> None:
         print("1. Расширенный алгоритм Евклида")
         print("2. Обратный элемент по модулю")
         print("3. Бинарное возведение в степень по модулю")
-        print("4. Факторизация n пробным делением")
+        print("4. Факторизация n методом Полларда rho")
         print("0. Назад")
         choice = input("Выберите действие: ").strip()
         if choice == "0":
@@ -133,9 +133,9 @@ def math_check_menu() -> None:
                 n = read_integer("Введите модуль n")
                 if n is None:
                     continue
-                p, q, checks = factor_modulus(n)
+                p, q, iterations = factor_modulus(n)
                 print(f"Факторизация: n = p·q = {p}·{q} = {p * q}.")
-                print(f"Проверено делителей: {checks}.")
+                print(f"Итераций алгоритма Полларда rho: {iterations}.")
             else:
                 print("Выберите 1, 2, 3, 4 или 0.")
         except ValueError as error:

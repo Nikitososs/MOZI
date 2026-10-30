@@ -44,13 +44,13 @@ def test_math_check_menu_displays_bezout_identity(monkeypatch, capsys):
     assert "Проверка: 240·-9 + 46·47 = 2." in output
 
 
-def test_math_check_menu_includes_trial_division(monkeypatch, capsys):
+def test_math_check_menu_runs_pollard_rho_factorization(monkeypatch, capsys):
     answers = iter(["3", "4", "56549", "0", "4"])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(answers))
 
     app.main()
 
     output = capsys.readouterr().out
-    assert "4. Факторизация n пробным делением" in output
+    assert "4. Факторизация n методом Полларда rho" in output
     assert "Факторизация: n = p·q = 193·293 = 56549." in output
-    assert "Проверено делителей: 192." in output
+    assert "Итераций алгоритма Полларда rho:" in output

@@ -13,11 +13,13 @@ from lab_5.rsa_attack import (
 from lab_5.variants import VARIANTS
 
 
-def test_trial_division_factors_variant_16_modulus():
-    assert factor_modulus(56549) == (193, 293, 192)
+def test_pollard_rho_factors_variant_16_modulus():
+    p, q, iterations = factor_modulus(56549)
+    assert (p, q) == (193, 293)
+    assert iterations > 0
 
 
-def test_trial_division_rejects_prime_modulus():
+def test_pollard_rho_rejects_prime_modulus():
     with pytest.raises(ValueError, match="число простое"):
         factor_modulus(101)
 
