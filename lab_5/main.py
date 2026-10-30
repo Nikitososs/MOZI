@@ -146,27 +146,24 @@ def main() -> None:
     while True:
         print("\n" + "=" * 65)
         print("ЛАБОРАТОРНАЯ РАБОТА № 5 — КРИПТОАНАЛИЗ ШИФРА RSA")
-        print("1. Выполнить свой вариант (вариант 16 по умолчанию)")
-        print("2. Выбрать вариант из таблицы методички")
-        print("3. Ввести произвольные e, n и C")
-        print("4. Проверка математики")
-        print("5. Выход")
+        print("1. Решить вариант из таблицы методички (1–30; по умолчанию 16)")
+        print("2. Ввести произвольные e, n и C")
+        print("3. Проверка математики")
+        print("4. Выход")
         choice = input("Выберите пункт меню: ").strip()
         if choice == "1":
-            run_variant(DEFAULT_VARIANT)
-        elif choice == "2":
             variant_number = read_variant("Введите номер варианта", DEFAULT_VARIANT)
             if variant_number is not None:
                 run_variant(variant_number)
-        elif choice == "3":
+        elif choice == "2":
             run_custom_attack()
-        elif choice == "4":
+        elif choice == "3":
             math_check_menu()
-        elif choice == "5":
+        elif choice == "4":
             print("Работа завершена.")
             return
         else:
-            print("Выберите 1, 2, 3, 4 или 5.")
+            print("Выберите 1, 2, 3 или 4.")
 
 
 if __name__ == "__main__":

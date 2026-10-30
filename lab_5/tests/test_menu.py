@@ -2,14 +2,14 @@ from lab_5 import main as app
 
 
 def test_main_menu_runs_variant_16_and_saves_results(monkeypatch, capsys, tmp_path):
-    answers = iter(["1", "5"])
+    answers = iter(["1", "16", "4"])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(answers))
     monkeypatch.setattr(app, "OUTPUT_DIR", tmp_path)
 
     app.main()
 
     output = capsys.readouterr().out
-    assert "5. Выход" in output
+    assert "4. Выход" in output
     assert "Вариант: 16" in output
     assert "Факторизация n: p=193, q=293" in output
     assert "Открытый текст: M=2316" in output
@@ -19,7 +19,7 @@ def test_main_menu_runs_variant_16_and_saves_results(monkeypatch, capsys, tmp_pa
 
 
 def test_custom_rsa_inputs_are_factored_and_decrypted(monkeypatch, capsys, tmp_path):
-    answers = iter(["3", "3", "55", "23", "5"])
+    answers = iter(["2", "3", "55", "23", "4"])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(answers))
     monkeypatch.setattr(app, "OUTPUT_DIR", tmp_path)
 
@@ -34,7 +34,7 @@ def test_custom_rsa_inputs_are_factored_and_decrypted(monkeypatch, capsys, tmp_p
 
 
 def test_math_check_menu_displays_bezout_identity(monkeypatch, capsys):
-    answers = iter(["4", "1", "240", "46", "0", "5"])
+    answers = iter(["3", "1", "240", "46", "0", "4"])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(answers))
 
     app.main()
@@ -45,7 +45,7 @@ def test_math_check_menu_displays_bezout_identity(monkeypatch, capsys):
 
 
 def test_math_check_menu_includes_trial_division(monkeypatch, capsys):
-    answers = iter(["4", "4", "56549", "0", "5"])
+    answers = iter(["3", "4", "56549", "0", "4"])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(answers))
 
     app.main()

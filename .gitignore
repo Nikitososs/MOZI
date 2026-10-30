@@ -231,3 +231,6 @@ Desktop.ini
 # Microsoft Word lock files
 ~$*.doc*
 
+
+# Generated RSA lab results
+lab_5/outputs/*.txt
