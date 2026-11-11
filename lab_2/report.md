@@ -87,6 +87,42 @@ $$
 
 Частотный анализ, построение гипотез и проверка ключей реализованы в `lab_2/cryptanalysis.py`; арифметика и преобразования — в модулях `lab_2/math_utils.py` и `lab_2/cipher.py`.
 
+
+## Работа приложения
+
+Запуск: `python -m lab_2.main`. В главном меню доступны шифрование и расшифрование с ключом $(a,b)$, частотный криптоанализ, решение варианта 16, математические операции и переключение русского/английского алфавита. Текст вводится с клавиатуры или из файла. При криптоанализе программа считает частоты, строит системы сравнений для гипотез о буквах, отбрасывает недопустимые ключи и ранжирует расшифровки. В режиме варианта она выводит протокол и сохраняет результат в каталоге `lab_2/outputs/`.
+
+Листинг: Формирование и ранжирование ключей-кандидатов (`lab_2/cryptanalysis.py`)
+
+```python
+def crack_affine_cipher(
+    ciphertext: str, alphabet: Optional[Alphabet] = None, top_n: int = 5
+) -> List[Tuple[float, Tuple[int, int], str, str]]:
+    """
+    Автоматический криптоанализ аффинного шифра:
+    перебор сформированных гипотез, дешифрование и ранжирование по баллу осмысленности.
+    Возвращает список кортежей: (score, (a, b), mapping, decrypted_preview).
+    """
+    alpha = alphabet or DEFAULT_ALPHABET
+    cipher = AffineCipher(alpha)
+    hypotheses = generate_hypotheses_systems(ciphertext, alpha)
+
+    evaluated = []
+    seen_keys = set()
+
+    for h in hypotheses:
+        for a, b in h["valid_keys"]:
+            if (a, b) in seen_keys:
+                continue
+            seen_keys.add((a, b))
+            dec_text = cipher.decrypt(ciphertext, a, b)
+            score = score_text(dec_text, alpha)
+            evaluated.append((score, (a, b), h["mapping"], dec_text))
+
+    evaluated.sort(key=lambda item: item[0], reverse=True)
+    return evaluated[:top_n]
+```
+
 # СПИСОК ЛИТЕРАТУРЫ
 
 - Математические основы защиты информации : методические указания к лабораторным работам / Минобрнауки России, Омский государственный технический университет ; составители С. Ю. Белим, С. В. Белим. — Омск : Издательство ОмГТУ, 2023. — С. 13–23, приложение 2. — Текст : электронный.
