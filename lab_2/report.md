@@ -92,9 +92,121 @@ $$
 
 Запуск: `python -m lab_2.main`. В главном меню доступны шифрование и расшифрование с ключом $(a,b)$, частотный криптоанализ, решение варианта 16, математические операции и переключение русского/английского алфавита. Текст вводится с клавиатуры или из файла. При криптоанализе программа считает частоты, строит системы сравнений для гипотез о буквах, отбрасывает недопустимые ключи и ранжирует расшифровки. В режиме варианта она выводит протокол и сохраняет результат в каталоге `lab_2/outputs/`.
 
-Листинг: Формирование и ранжирование ключей-кандидатов (`lab_2/cryptanalysis.py`)
+# СПИСОК ЛИТЕРАТУРЫ
+
+- Математические основы защиты информации : методические указания к лабораторным работам / Минобрнауки России, Омский государственный технический университет ; составители С. Ю. Белим, С. В. Белим. — Омск : Издательство ОмГТУ, 2023. — С. 13–23, приложение 2. — Текст : электронный.
+
+# ПРИЛОЖЕНИЯ
+
+## Приложение А. Фрагмент исходного кода `cryptanalysis.py`
+
+Частотный профиль, построение допустимых ключей и отбор расшифровок. Фрагмент использует `score_text`, класс `AffineCipher` и решатель сравнений, реализованные в соседних частях проекта. Полная реализация вспомогательной оценки `score_text` находится в `lab_2/cryptanalysis.py`; здесь приведён фрагмент, который вызывает её для ранжирования кандидатов.
+
+Листинг: Основные функции модуля `cryptanalysis.py`
 
 ```python
+from collections import Counter
+import math
+from typing import Any, Dict, List, Optional, Tuple
+
+from lab_2.alphabet import Alphabet, DEFAULT_ALPHABET, RUSSIAN_FREQUENCIES, get_reference_frequencies
+from lab_2.cipher import AffineCipher
+from lab_2.math_utils import solve_system_congruences
+
+
+def frequency_analysis(text: str, alphabet: Optional[Alphabet] = None) -> Dict[str, Any]:
+    """
+    Выполняет частотный анализ символов текста.
+
+    Возвращает структуру:
+      - 'counts': Dict[символ, количество]
+      - 'frequencies': Dict[символ, относительная частота]
+      - 'sorted_chars': List[Tuple[символ, количество, частота]] по убыванию частоты
+      - 'total_alpha_chars': общее количество букв алфавита в тексте
+    """
+    alpha = alphabet or DEFAULT_ALPHABET
+    canonical = "".join(
+        alpha.normalize_char(c) for c in text if alpha.normalize_char(c) in alpha.char_to_code
+    )
+    total = len(canonical)
+    counts_map = Counter(canonical)
+
+    frequencies = {}
+    for sym in alpha.symbols:
+        cnt = counts_map.get(sym, 0)
+        frequencies[sym] = (cnt / total) if total > 0 else 0.0
+
+    sorted_chars = sorted(
+        [(sym, counts_map.get(sym, 0), frequencies[sym]) for sym in alpha.symbols],
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    return {
+        "counts": counts_map,
+        "frequencies": frequencies,
+        "sorted_chars": sorted_chars,
+        "total_alpha_chars": total,
+    }
+
+def generate_hypotheses_systems(
+    ciphertext: str,
+    alphabet: Optional[Alphabet] = None,
+    top_ct_count: int = 2,
+    top_pt_count: int = 6,
+) -> List[Dict[str, Any]]:
+    """
+    Формирует и аналитически решает системы сравнений:
+      (x1 * a + b) ≡ y1 (mod m)
+      (x2 * a + b) ≡ y2 (mod m)
+    где (y1, y2) — пара частых символов шифр-текста, а (x1, x2) — пара частых букв языка.
+    """
+    alpha = alphabet or DEFAULT_ALPHABET
+    m = alpha.power
+    fa = frequency_analysis(ciphertext, alpha)
+    if fa["total_alpha_chars"] == 0:
+        return []
+
+    # Берем только фактически встретившиеся в шифр-тексте символы алфавита
+    non_zero_ct = [item[0] for item in fa["sorted_chars"] if item[1] > 0]
+    if len(non_zero_ct) < 2:
+        return []
+
+    top_ct = non_zero_ct[:top_ct_count]
+    ref_freq = get_reference_frequencies(alpha)
+    top_pt = [item[0] for item in ref_freq[:top_pt_count] if item[0] in alpha.char_to_code]
+    if len(top_pt) < 2:
+        return []
+
+    hypotheses: List[Dict[str, Any]] = []
+
+    for i in range(len(top_ct)):
+        for j in range(i + 1, len(top_ct)):
+            y1_char, y2_char = top_ct[i], top_ct[j]
+            y1, y2 = alpha.A(y1_char), alpha.A(y2_char)
+
+            for p1_idx in range(len(top_pt)):
+                for p2_idx in range(len(top_pt)):
+                    if p1_idx == p2_idx:
+                        continue
+                    x1_char, x2_char = top_pt[p1_idx], top_pt[p2_idx]
+                    x1, x2 = alpha.A(x1_char), alpha.A(x2_char)
+
+                    st, solutions, desc = solve_system_congruences(x1, y1, x2, y2, m)
+                    valid_keys = [(a, b) for a, b in solutions if math.gcd(a, m) == 1]
+
+                    hypotheses.append(
+                        {
+                            "mapping": f"E({x1_char})={y1_char}, E({x2_char})={y2_char}",
+                            "equations": f"({x1}a + b) ≡ {y1} (mod {m}); ({x2}a + b) ≡ {y2} (mod {m})",
+                            "status": st,
+                            "description": desc,
+                            "valid_keys": valid_keys,
+                        }
+                    )
+
+    return hypotheses
+
 def crack_affine_cipher(
     ciphertext: str, alphabet: Optional[Alphabet] = None, top_n: int = 5
 ) -> List[Tuple[float, Tuple[int, int], str, str]]:
@@ -122,7 +234,3 @@ def crack_affine_cipher(
     evaluated.sort(key=lambda item: item[0], reverse=True)
     return evaluated[:top_n]
 ```
-
-# СПИСОК ЛИТЕРАТУРЫ
-
-- Математические основы защиты информации : методические указания к лабораторным работам / Минобрнауки России, Омский государственный технический университет ; составители С. Ю. Белим, С. В. Белим. — Омск : Издательство ОмГТУ, 2023. — С. 13–23, приложение 2. — Текст : электронный.
