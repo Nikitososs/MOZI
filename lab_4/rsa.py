@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import gcd
+import random
 
 ALPHABET = "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
 SYMBOL_TO_CODE = {symbol: index + 10 for index, symbol in enumerate(ALPHABET)}
@@ -100,14 +101,34 @@ def generate_key_pairs(p: int, q: int, count: int = 3) -> list[KeyPair]:
     if count < 3:
         raise ValueError("Для лабораторной требуется не менее трёх пар ключей.")
     phi = (p - 1) * (q - 1)
-    pairs: list[KeyPair] = []
-    for e in range(2, phi):
-        if gcd(e, phi) == 1:
-            pairs.append(KeyPair(e=e, d=mod_inverse(e, phi), n=n, phi=phi))
-            if len(pairs) == count:
-                break
-    if len(pairs) < count:
-        raise ValueError(f"Для φ(n)={phi} удалось сформировать только {len(pairs)} ключевых пар.")
+    # Вариант последовательного перебора e оставлен как комментарий:
+    # pairs = []
+    # for e in range(2, phi):
+    #     if gcd(e, phi) == 1:
+    #         pairs.append(KeyPair(e=e, d=mod_inverse(e, phi), n=n, phi=phi))
+    #         if len(pairs) == count:
+    #             break
+    #
+    # pairs = []
+    # used_exponents = set()
+    # while len(pairs) < count:
+    #     e = random.randrange(2, phi)
+    #     if e not in used_exponents and gcd(e, phi) == 1:
+    #         used_exponents.add(e)
+    #         pairs.append(KeyPair(e=e, d=mod_inverse(e, phi), n=n, phi=phi))
+
+    # e должно быть взаимно простым с φ(n)
+    candidates = [e for e in range(2, phi) if gcd(e, phi) == 1]
+    if len(candidates) < count:
+        raise ValueError(
+            f"Для φ(n)={phi} можно сформировать только {len(candidates)} различных ключевых пар."
+        )
+
+    selected_exponents = random.sample(candidates, count)
+    pairs = [
+        KeyPair(e=e, d=mod_inverse(e, phi), n=n, phi=phi)
+        for e in selected_exponents
+    ]
     return pairs
 
 
