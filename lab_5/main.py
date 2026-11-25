@@ -9,6 +9,7 @@ from lab_5.rsa_attack import (
     attack_rsa,
     attack_variant,
     extended_gcd,
+    factor_by_prime_triplets,
     factor_modulus,
     modular_inverse,
     modular_power,
@@ -49,7 +50,7 @@ def format_result(result: AttackResult) -> str:
         "Лабораторная работа № 5 — криптоанализ RSA факторизацией модуля\n"
         f"{variant_label}"
         f"Открытый ключ (e, n): ({result.e}, {result.n})\n"
-        f"Факторизация n: p={result.p}, q={result.q}; итераций rho: {result.factorization_iterations}\n"
+        f"Факторизация n: p={result.p}, q={result.q}; проверок НОД групп: {result.factorization_checks}\n"
         f"φ(n) = (p−1)(q−1) = {result.phi}\n"
         f"Закрытый показатель: d={result.d}\n"
         f"Шифротекст: C={result.ciphertext}\n"
@@ -98,7 +99,7 @@ def math_check_menu() -> None:
         print("1. Расширенный алгоритм Евклида")
         print("2. Обратный элемент по модулю")
         print("3. Бинарное возведение в степень по модулю")
-        print("4. Факторизация n методом Полларда rho")
+        print("4. Факторизация n группами по три простых числа")
         print("0. Назад")
         choice = input("Выберите действие: ").strip()
         if choice == "0":
@@ -133,9 +134,18 @@ def math_check_menu() -> None:
                 n = read_integer("Введите модуль n")
                 if n is None:
                     continue
-                p, q, iterations = factor_modulus(n)
-                print(f"Факторизация: n = p·q = {p}·{q} = {p * q}.")
-                print(f"Итераций алгоритма Полларда rho: {iterations}.")
+                factors, gcd_checks = factor_by_prime_triplets(n)
+                if len(factors) == 1:
+                    print(f"Число n={n} простое.")
+                else:
+                    powers = [
+                        f"{prime}^{factors.count(prime)}"
+                        if factors.count(prime) > 1
+                        else str(prime)
+                        for prime in sorted(set(factors))
+                    ]
+                    print(f"Факторизация: {n} = {' · '.join(powers)}.")
+                print(f"Вычислений НОД для групп простых чисел: {gcd_checks}.")
             else:
                 print("Выберите 1, 2, 3, 4 или 0.")
         except ValueError as error:

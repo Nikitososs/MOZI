@@ -6,6 +6,7 @@ from lab_5.rsa_attack import (
     attack_rsa,
     attack_variant,
     extended_gcd,
+    factor_by_prime_triplets,
     factor_modulus,
     modular_inverse,
     modular_power,
@@ -13,13 +14,26 @@ from lab_5.rsa_attack import (
 from lab_5.variants import VARIANTS
 
 
-def test_pollard_rho_factors_variant_16_modulus():
-    p, q, iterations = factor_modulus(56549)
+def test_prime_triplet_gcd_factorization_factors_variant_16_modulus():
+    p, q, gcd_checks = factor_modulus(56549)
     assert (p, q) == (193, 293)
-    assert iterations > 0
+    assert gcd_checks > 0
 
 
-def test_pollard_rho_rejects_prime_modulus():
+def test_prime_triplet_factorization_matches_methodical_example():
+    factors, gcd_checks = factor_by_prime_triplets(84_257_901)
+    assert factors == [3, 3, 3, 3, 7, 7, 13, 23, 71]
+    assert math.prod(factors) == 84_257_901
+    assert gcd_checks == 8
+
+
+def test_prime_triplet_factorization_extracts_powers_of_two_first():
+    factors, gcd_checks = factor_by_prime_triplets(2**5 * 3 * 11)
+    assert factors == [2, 2, 2, 2, 2, 3, 11]
+    assert gcd_checks > 0
+
+
+def test_prime_triplet_factorization_rejects_prime_modulus():
     with pytest.raises(ValueError, match="число простое"):
         factor_modulus(101)
 

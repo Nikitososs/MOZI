@@ -32,7 +32,7 @@
 
 ## Результаты криптоанализа варианта 16
 
-Открытый ключ $(e,n)=(251,56549)$, шифротекст $C=20844$. Метод rho Полларда нашёл множители $p=193$ и $q=293$ за 11 итераций.
+Открытый ключ $(e,n)=(251,56549)$, шифротекст $C=20844$. Групповая пробная факторизация выделила $p=193$ и $q=293$ за 15 вычислений НОД для групп простых чисел.
 
 Таблица: Восстановление ключа и открытого блока
 
@@ -46,14 +46,14 @@
 
 Проверка обратного показателя: $251\cdot38195=9586945=171\cdot56064+1$, поэтому $ed\bmod\varphi(n)=1$. Повторное шифрование подтверждает результат: $2316^{251}\bmod56549=20844=C$.
 
-Для учебного варианта результат расшифрования — числовой блок $M=2316$. Реализация rho Полларда, восстановление $d$ и модульное возведение в степень находятся в `lab_5/rsa_attack.py`; исходные варианты — в `lab_5/variants.py`.
+Для учебного варианта результат расшифрования — числовой блок $M=2316$. В проверочном примере методички $84\,257\,901$ разложено по группам $q_1=105$, $q_2=2431$, $q_3=12673$: НОД с $q_1$ даёт $21,21,3,3$, затем с $q_2$ — $13$, с $q_3$ — $23$; остаток $71$ прост. Получено $84\,257\,901=3^4\cdot7^2\cdot13\cdot23\cdot71$. Алгоритм предварительно выделяет степени двойки, а НОД с произведением тройки повторяется для текущего остатка до результата 1. Простота исходного и конечного остатка проверяется пробным делением. Реализация находится в `lab_5/rsa_attack.py`; исходные варианты — в `lab_5/variants.py`.
 
 
 ---
 
 ## Работа приложения
 
-Запуск: `python -m lab_5.main`. Пункт 1 решает выбранный вариант из таблицы 1–30 (по умолчанию 16); пункт 2 принимает произвольные $e,n,C$; пункт 3 открывает математические проверки, включая расширенный алгоритм Евклида, обратный элемент, бинарное возведение в степень и факторизацию rho Полларда. После атаки программа выводит найденные множители, число итераций, $\varphi(n)$, закрытый показатель, расшифрованный блок и результат повторного шифрования. Расчёт сохраняется в `lab_5/outputs/variant_<номер>_solution.txt`.
+Запуск: `python -m lab_5.main`. Пункт 1 решает выбранный вариант из таблицы 1–30 (по умолчанию 16); пункт 2 принимает произвольные $e,n,C$; пункт 3 открывает математические проверки, включая расширенный алгоритм Евклида, обратный элемент, бинарное возведение в степень и факторизацию группами простых троек. При факторизации программа удаляет степени двойки, проверяет простоту и затем вычисляет НОД остатка с произведением очередной тройки простых чисел. После атаки выводятся найденные множители, число вычислений НОД, $\varphi(n)$, закрытый показатель, расшифрованный блок и результат повторного шифрования. Расчёт сохраняется в `lab_5/outputs/variant_<номер>_solution.txt`.
 
 # СПИСОК ЛИТЕРАТУРЫ
 
@@ -63,9 +63,9 @@
 
 ## Приложение А. Фрагмент исходного кода `rsa_attack.py`
 
-Факторизация модуля, восстановление закрытого показателя и проверка расшифрования.
+Проверка простоты, факторизация произведениями троек простых чисел, восстановление закрытого показателя и проверка расшифрования.
 
-Листинг: Основные функции модуля `rsa_attack.py`
+Листинг: Факторизация RSA-модуля и выполнение атаки
 
 ```python
 from __future__ import annotations
@@ -76,6 +76,7 @@ from math import gcd, isqrt
 from lab_5.variants import Variant
 
 
+@dataclass(frozen=True)
 class AttackResult:
     variant: int | None
     e: int
@@ -86,45 +87,77 @@ class AttackResult:
     phi: int
     d: int
     plaintext: int
-    factorization_iterations: int
+    factorization_checks: int
 
 def factor_modulus(n: int) -> tuple[int, int, int]:
-    """Найти простые множители n методом Полларда rho и число итераций."""
+    """Найти два различных простых множителя RSA-модуля и число проверок НОД."""
     if n < 4:
         raise ValueError("Модуль n должен быть не меньше 4.")
 
     if is_prime(n):
         raise ValueError(f"Не удалось факторизовать n={n}: число простое.")
 
-    factor, iterations = pollard_rho_factor(n)
-    quotient = n // factor
-    if not is_prime(factor) or not is_prime(quotient):
+    factors, gcd_checks = factor_by_prime_triplets(n)
+    if len(factors) != 2:
         raise ValueError("n должно раскладываться на два простых множителя.")
+    factor, quotient = factors
     if factor == quotient:
         raise ValueError("Множители RSA-модуля должны быть различными простыми числами.")
-    return min(factor, quotient), max(factor, quotient), iterations
+    return factor, quotient, gcd_checks
 
-def pollard_rho_factor(n: int) -> tuple[int, int]:
-    """Найти нетривиальный делитель n циклическим методом Полларда rho."""
-    if n % 2 == 0:
-        return 2, 1
-    if n % 3 == 0:
-        return 3, 1
+def factor_by_prime_triplets(n: int) -> tuple[list[int], int]:
+    """Разложить n по тройкам простых чисел с помощью gcd.
 
-    total_iterations = 0
-    constant = 1
-    while True:
-        x = y = 2
-        divisor = 1
-        while divisor == 1:
-            x = (x * x + constant) % n
-            y = (y * y + constant) % n
-            y = (y * y + constant) % n
-            divisor = gcd(abs(x - y), n)
-            total_iterations += 1
-        if divisor != n:
-            return divisor, total_iterations
-        constant += 1
+    Степени двойки сначала выделяются двоичным сдвигом. Для нечётного
+    остатка последовательно строятся группы (3, 5, 7), (11, 13, 17), ...;
+    НОД остатка с произведением группы находит содержащиеся в ней делители;
+    деление повторяется с той же группой до получения НОД, равного 1.
+    Возвращаются простые множители с кратностями и число вычислений НОД.
+    """
+    if n < 2:
+        raise ValueError("Для факторизации требуется n ≥ 2.")
+
+    remaining = n
+    factors: list[int] = []
+    while remaining & 1 == 0:
+        factors.append(2)
+        remaining >>= 1
+
+    gcd_checks = 0
+    if remaining == 1:
+        return factors, gcd_checks
+    if is_prime(remaining):
+        factors.append(remaining)
+        return factors, gcd_checks
+
+    candidate = 3
+    while remaining > 1:
+        triplet: list[int] = []
+        while len(triplet) < 3:
+            if is_prime(candidate):
+                triplet.append(candidate)
+            candidate += 2
+
+        group_product = triplet[0] * triplet[1] * triplet[2]
+        while True:
+            common_divisor = gcd(remaining, group_product)
+            gcd_checks += 1
+            if common_divisor == 1:
+                break
+
+            remaining //= common_divisor
+            for prime in triplet:
+                if common_divisor % prime == 0:
+                    factors.append(prime)
+                    common_divisor //= prime
+            if common_divisor != 1:
+                raise ArithmeticError("НОД содержит делитель вне проверяемой тройки простых чисел.")
+
+            if remaining > 1 and is_prime(remaining):
+                factors.append(remaining)
+                return sorted(factors), gcd_checks
+
+    return sorted(factors), gcd_checks
 
 def is_prime(number: int) -> bool:
     """Проверить простоту пробным делением до квадратного корня."""
@@ -149,7 +182,6 @@ def extended_gcd(a: int, b: int) -> tuple[int, int, int]:
     if old_r < 0:
         return -old_r, -old_x, -old_y
     return old_r, old_x, old_y
-
 
 def modular_inverse(value: int, modulus: int) -> int:
     """Найти обратный элемент value modulo modulus расширенным алгоритмом Евклида."""
@@ -184,7 +216,7 @@ def attack_rsa(e: int, n: int, ciphertext: int, variant: int | None = None) -> A
     if not 0 <= ciphertext < n:
         raise ValueError("Шифротекст C должен удовлетворять условию 0 ≤ C < n.")
 
-    p, q, iterations = factor_modulus(n)
+    p, q, gcd_checks = factor_modulus(n)
     phi = (p - 1) * (q - 1)
     if e >= phi:
         raise ValueError(f"Открытый показатель e должен быть меньше φ(n)={phi}.")
@@ -193,5 +225,5 @@ def attack_rsa(e: int, n: int, ciphertext: int, variant: int | None = None) -> A
     if modular_power(plaintext, e, n) != ciphertext:
         raise ValueError("Проверка шифрования не пройдена: проверьте исходные данные.")
 
-    return AttackResult(variant, e, n, ciphertext, p, q, phi, d, plaintext, iterations)
+    return AttackResult(variant, e, n, ciphertext, p, q, phi, d, plaintext, gcd_checks)
 ```

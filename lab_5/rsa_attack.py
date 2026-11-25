@@ -1,4 +1,4 @@
-"""Учебная атака на RSA с факторизацией модуля методом Полларда rho."""
+"""Учебная атака на RSA с групповой пробной факторизацией."""
 
 from __future__ import annotations
 
@@ -19,47 +19,79 @@ class AttackResult:
     phi: int
     d: int
     plaintext: int
-    factorization_iterations: int
+    factorization_checks: int
 
 
 def factor_modulus(n: int) -> tuple[int, int, int]:
-    """Найти простые множители n методом Полларда rho и число итераций."""
+    """Найти два различных простых множителя RSA-модуля и число проверок НОД."""
     if n < 4:
         raise ValueError("Модуль n должен быть не меньше 4.")
 
     if is_prime(n):
         raise ValueError(f"Не удалось факторизовать n={n}: число простое.")
 
-    factor, iterations = pollard_rho_factor(n)
-    quotient = n // factor
-    if not is_prime(factor) or not is_prime(quotient):
+    factors, gcd_checks = factor_by_prime_triplets(n)
+    if len(factors) != 2:
         raise ValueError("n должно раскладываться на два простых множителя.")
+    factor, quotient = factors
     if factor == quotient:
         raise ValueError("Множители RSA-модуля должны быть различными простыми числами.")
-    return min(factor, quotient), max(factor, quotient), iterations
+    return factor, quotient, gcd_checks
 
 
-def pollard_rho_factor(n: int) -> tuple[int, int]:
-    """Найти нетривиальный делитель n циклическим методом Полларда rho."""
-    if n % 2 == 0:
-        return 2, 1
-    if n % 3 == 0:
-        return 3, 1
+def factor_by_prime_triplets(n: int) -> tuple[list[int], int]:
+    """Разложить n по тройкам простых чисел с помощью gcd.
 
-    total_iterations = 0
-    constant = 1
-    while True:
-        x = y = 2
-        divisor = 1
-        while divisor == 1:
-            x = (x * x + constant) % n
-            y = (y * y + constant) % n
-            y = (y * y + constant) % n
-            divisor = gcd(abs(x - y), n)
-            total_iterations += 1
-        if divisor != n:
-            return divisor, total_iterations
-        constant += 1
+    Степени двойки сначала выделяются двоичным сдвигом. Для нечётного
+    остатка последовательно строятся группы (3, 5, 7), (11, 13, 17), ...;
+    НОД остатка с произведением группы находит содержащиеся в ней делители;
+    деление повторяется с той же группой до получения НОД, равного 1.
+    Возвращаются простые множители с кратностями и число вычислений НОД.
+    """
+    if n < 2:
+        raise ValueError("Для факторизации требуется n ≥ 2.")
+
+    remaining = n
+    factors: list[int] = []
+    while remaining & 1 == 0:
+        factors.append(2)
+        remaining >>= 1
+
+    gcd_checks = 0
+    if remaining == 1:
+        return factors, gcd_checks
+    if is_prime(remaining):
+        factors.append(remaining)
+        return factors, gcd_checks
+
+    candidate = 3
+    while remaining > 1:
+        triplet: list[int] = []
+        while len(triplet) < 3:
+            if is_prime(candidate):
+                triplet.append(candidate)
+            candidate += 2
+
+        group_product = triplet[0] * triplet[1] * triplet[2]
+        while True:
+            common_divisor = gcd(remaining, group_product)
+            gcd_checks += 1
+            if common_divisor == 1:
+                break
+
+            remaining //= common_divisor
+            for prime in triplet:
+                if common_divisor % prime == 0:
+                    factors.append(prime)
+                    common_divisor //= prime
+            if common_divisor != 1:
+                raise ArithmeticError("НОД содержит делитель вне проверяемой тройки простых чисел.")
+
+            if remaining > 1 and is_prime(remaining):
+                factors.append(remaining)
+                return sorted(factors), gcd_checks
+
+    return sorted(factors), gcd_checks
 
 
 def is_prime(number: int) -> bool:
@@ -123,7 +155,7 @@ def attack_rsa(e: int, n: int, ciphertext: int, variant: int | None = None) -> A
     if not 0 <= ciphertext < n:
         raise ValueError("Шифротекст C должен удовлетворять условию 0 ≤ C < n.")
 
-    p, q, iterations = factor_modulus(n)
+    p, q, gcd_checks = factor_modulus(n)
     phi = (p - 1) * (q - 1)
     if e >= phi:
         raise ValueError(f"Открытый показатель e должен быть меньше φ(n)={phi}.")
@@ -132,7 +164,7 @@ def attack_rsa(e: int, n: int, ciphertext: int, variant: int | None = None) -> A
     if modular_power(plaintext, e, n) != ciphertext:
         raise ValueError("Проверка шифрования не пройдена: проверьте исходные данные.")
 
-    return AttackResult(variant, e, n, ciphertext, p, q, phi, d, plaintext, iterations)
+    return AttackResult(variant, e, n, ciphertext, p, q, phi, d, plaintext, gcd_checks)
 
 
 def attack_variant(variant: Variant) -> AttackResult:
