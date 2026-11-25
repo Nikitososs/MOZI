@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import gcd, isqrt, prod
+from math import gcd, prod
 
 from lab_5.variants import Variant
 
@@ -71,7 +71,7 @@ def factor_by_prime_triplets(
         if trace is not None:
             trace.append("Остаток равен 1; факторизация завершена.")
         return factors, gcd_checks
-    limit = isqrt(remaining)
+    limit = integer_sqrt(remaining)
     sieve_primes = primes_up_to(limit)
     sieve_prime_set = set(sieve_primes)
     if _is_prime_from_sieve_primes(remaining, sieve_primes):
@@ -153,7 +153,7 @@ def is_prime(number: int) -> bool:
     """Проверить простоту делением на простые числа из решета до sqrt(number)."""
     if number < 2:
         return False
-    return _is_prime_from_sieve_primes(number, primes_up_to(isqrt(number)))
+    return _is_prime_from_sieve_primes(number, primes_up_to(integer_sqrt(number)))
 
 
 def _is_prime_from_sieve_primes(number: int, primes: list[int]) -> bool:
@@ -177,12 +177,32 @@ def primes_up_to(limit: int) -> list[int]:
     sieve[0] = False
     if limit >= 1:
         sieve[1] = False
-    for candidate in range(2, isqrt(limit) + 1):
+    for candidate in range(2, integer_sqrt(limit) + 1):
         if sieve[candidate]:
             first_composite = candidate * candidate
             for multiple in range(first_composite, limit + 1, candidate):
                 sieve[multiple] = False
     return [number for number, is_prime_candidate in enumerate(sieve) if is_prime_candidate]
+
+
+def integer_sqrt(number: int) -> int:
+    """Вернуть floor(sqrt(number)) двоичным поиском без вычислений с float."""
+    if number < 0:
+        raise ValueError("Квадратный корень отрицательного числа не определён.")
+    if number < 2:
+        return number
+
+    lower = 1
+    upper = number
+    root = 0
+    while lower <= upper:
+        middle = (lower + upper) // 2
+        if middle * middle <= number:
+            root = middle
+            lower = middle + 1
+        else:
+            upper = middle - 1
+    return root
 
 
 def extended_gcd(a: int, b: int) -> tuple[int, int, int]:

@@ -46,7 +46,7 @@
 
 Проверка обратного показателя: $251\cdot38195=9586945=171\cdot56064+1$, поэтому $ed\bmod\varphi(n)=1$. Повторное шифрование подтверждает результат: $2316^{251}\bmod56549=20844=C$.
 
-Для учебного варианта результат расшифрования — числовой блок $M=2316$. Дополнительная проверка по примеру методички: $84\,257\,901=3^4\cdot7^2\cdot13\cdot23\cdot71$; НОД с $q_1=105$ даёт $21,21,3,3$, с $q_2=2431$ — $13$, с $q_3=12673$ — $23$, после чего остаток $71$ прост. Решето строится один раз до $\sqrt n$ и повторно используется при сборке троек и проверке остатка. В решете кратные простого $p$ отмечаются начиная с $p^2$, так как меньшие кратные уже обработаны.
+Для учебного варианта результат расшифрования — числовой блок $M=2316$. Дополнительная проверка по примеру методички: $84\,257\,901=3^4\cdot7^2\cdot13\cdot23\cdot71$; НОД с $q_1=105$ даёт $21,21,3,3$, с $q_2=2431$ — $13$, с $q_3=12673$ — $23$, после чего остаток $71$ прост. Решето строится один раз до $\lfloor\sqrt n\rfloor$ и повторно используется при сборке троек и проверке остатка. Целая часть корня вычисляется двоичным поиском целочисленными операциями. В решете кратные простого $p$ отмечаются начиная с $p^2$, так как меньшие кратные уже обработаны.
 
 
 ---
@@ -71,7 +71,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import gcd, isqrt, prod
+from math import gcd, prod
 
 from lab_5.variants import Variant
 
@@ -137,7 +137,7 @@ def factor_by_prime_triplets(
         if trace is not None:
             trace.append("Остаток равен 1; факторизация завершена.")
         return factors, gcd_checks
-    limit = isqrt(remaining)
+    limit = integer_sqrt(remaining)
     sieve_primes = primes_up_to(limit)
     sieve_prime_set = set(sieve_primes)
     if _is_prime_from_sieve_primes(remaining, sieve_primes):
@@ -218,7 +218,7 @@ def is_prime(number: int) -> bool:
     """Проверить простоту делением на простые числа из решета до sqrt(number)."""
     if number < 2:
         return False
-    return _is_prime_from_sieve_primes(number, primes_up_to(isqrt(number)))
+    return _is_prime_from_sieve_primes(number, primes_up_to(integer_sqrt(number)))
 
 def _is_prime_from_sieve_primes(number: int, primes: list[int]) -> bool:
     """Проверить число делителями из готового списка простых до его корня."""
@@ -240,12 +240,31 @@ def primes_up_to(limit: int) -> list[int]:
     sieve[0] = False
     if limit >= 1:
         sieve[1] = False
-    for candidate in range(2, isqrt(limit) + 1):
+    for candidate in range(2, integer_sqrt(limit) + 1):
         if sieve[candidate]:
             first_composite = candidate * candidate
             for multiple in range(first_composite, limit + 1, candidate):
                 sieve[multiple] = False
     return [number for number, is_prime_candidate in enumerate(sieve) if is_prime_candidate]
+
+def integer_sqrt(number: int) -> int:
+    """Вернуть floor(sqrt(number)) двоичным поиском без вычислений с float."""
+    if number < 0:
+        raise ValueError("Квадратный корень отрицательного числа не определён.")
+    if number < 2:
+        return number
+
+    lower = 1
+    upper = number
+    root = 0
+    while lower <= upper:
+        middle = (lower + upper) // 2
+        if middle * middle <= number:
+            root = middle
+            lower = middle + 1
+        else:
+            upper = middle - 1
+    return root
 
 def extended_gcd(a: int, b: int) -> tuple[int, int, int]:
     """Вернуть (g, x, y), такие что ax + by = g = НОД(a, b)."""

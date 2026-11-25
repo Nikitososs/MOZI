@@ -8,6 +8,7 @@ from lab_5.rsa_attack import (
     extended_gcd,
     factor_by_prime_triplets,
     factor_modulus,
+    integer_sqrt,
     is_prime,
     modular_inverse,
     modular_power,
@@ -42,6 +43,28 @@ def test_sieve_of_eratosthenes_generates_primes_and_primality_checks():
     assert is_prime(97)
     assert not is_prime(1)
     assert not is_prime(91)
+
+
+@pytest.mark.parametrize(
+    "number, expected",
+    [
+        (0, 0),
+        (1, 1),
+        (2, 1),
+        (15, 3),
+        (16, 4),
+        (17, 4),
+        (10**100, 10**50),
+        ((10**50 + 1) ** 2 - 1, 10**50),
+    ],
+)
+def test_integer_square_root_uses_floor_for_small_and_large_integers(number, expected):
+    assert integer_sqrt(number) == expected
+
+
+def test_integer_square_root_rejects_negative_input():
+    with pytest.raises(ValueError, match="отрицательного"):
+        integer_sqrt(-1)
 
 
 def test_prime_triplet_factorization_rejects_prime_modulus():
