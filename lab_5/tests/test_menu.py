@@ -16,6 +16,9 @@ def test_main_menu_runs_variant_16_and_saves_results(monkeypatch, capsys, tmp_pa
     assert "Работа завершена." in output
     saved = (tmp_path / "variant_16_solution.txt").read_text(encoding="utf-8")
     assert "Закрытый показатель: d=38195" in saved
+    assert "Протокол перебора троек простых чисел:" in saved
+    assert "Сформирована тройка (3, 5, 7); произведение q = 105." in saved
+    assert "Проверка кандидата 9: составное, пропущено." in saved
 
 
 def test_custom_rsa_inputs_are_factored_and_decrypted(monkeypatch, capsys, tmp_path):
@@ -44,9 +47,10 @@ def test_math_check_menu_displays_bezout_identity(monkeypatch, capsys):
     assert "Проверка: 240·-9 + 46·47 = 2." in output
 
 
-def test_math_check_menu_runs_prime_triplet_factorization(monkeypatch, capsys):
+def test_math_check_menu_runs_prime_triplet_factorization(monkeypatch, capsys, tmp_path):
     answers = iter(["3", "4", "84257901", "0", "4"])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(answers))
+    monkeypatch.setattr(app, "OUTPUT_DIR", tmp_path)
 
     app.main()
 
@@ -54,3 +58,9 @@ def test_math_check_menu_runs_prime_triplet_factorization(monkeypatch, capsys):
     assert "4. Факторизация n группами по три простых числа" in output
     assert "Факторизация: 84257901 = 3^4 · 7^2 · 13 · 23 · 71." in output
     assert "Вычислений НОД для групп простых чисел:" in output
+    trace_file = tmp_path / "factorization_84257901_steps.txt"
+    assert trace_file.exists()
+    trace = trace_file.read_text(encoding="utf-8")
+    assert "Сформирована тройка (3, 5, 7); произведение q = 105." in trace
+    assert "НОД(84257901, 105) = 21." in trace
+    assert "Остаток 71 простое; факторизация завершена." in trace

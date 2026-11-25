@@ -20,17 +20,17 @@ class AttackResult:
     d: int
     plaintext: int
     factorization_checks: int
+    factorization_trace: tuple[str, ...]
 
 
-def factor_modulus(n: int) -> tuple[int, int, int]:
+def factor_modulus(n: int, trace: list[str] | None = None) -> tuple[int, int, int]:
     """Найти два различных простых множителя RSA-модуля и число проверок НОД."""
     if n < 4:
         raise ValueError("Модуль n должен быть не меньше 4.")
 
-    if is_prime(n):
+    factors, gcd_checks = factor_by_prime_triplets(n, trace)
+    if len(factors) == 1:
         raise ValueError(f"Не удалось факторизовать n={n}: число простое.")
-
-    factors, gcd_checks = factor_by_prime_triplets(n)
     if len(factors) != 2:
         raise ValueError("n должно раскладываться на два простых множителя.")
     factor, quotient = factors
@@ -39,7 +39,9 @@ def factor_modulus(n: int) -> tuple[int, int, int]:
     return factor, quotient, gcd_checks
 
 
-def factor_by_prime_triplets(n: int) -> tuple[list[int], int]:
+def factor_by_prime_triplets(
+    n: int, trace: list[str] | None = None
+) -> tuple[list[int], int]:
     """Разложить n по тройкам простых чисел с помощью gcd.
 
     Степени двойки сначала выделяются двоичным сдвигом. Для нечётного
@@ -51,46 +53,82 @@ def factor_by_prime_triplets(n: int) -> tuple[list[int], int]:
     if n < 2:
         raise ValueError("Для факторизации требуется n ≥ 2.")
 
+    if trace is not None:
+        trace.append(f"Начальное число: n = {n}.")
     remaining = n
     factors: list[int] = []
     while remaining & 1 == 0:
         factors.append(2)
+        if trace is not None:
+            trace.append(f"Остаток чётный: выделен множитель 2; {remaining} >> 1.")
         remaining >>= 1
 
     gcd_checks = 0
+    if trace is not None:
+        trace.append(f"После выделения двоек остаток: {remaining}.")
     if remaining == 1:
+        if trace is not None:
+            trace.append("Остаток равен 1; факторизация завершена.")
         return factors, gcd_checks
     if is_prime(remaining):
         factors.append(remaining)
+        if trace is not None:
+            trace.append(f"Остаток {remaining} простое; добавлен последний множитель.")
         return factors, gcd_checks
+    if trace is not None:
+        trace.append(f"Остаток {remaining} составной; начинаем перебор троек простых.")
 
     candidate = 3
     while remaining > 1:
         triplet: list[int] = []
         while len(triplet) < 3:
-            if is_prime(candidate):
+            candidate_is_prime = is_prime(candidate)
+            if trace is not None:
+                verdict = "простое, добавлено в тройку" if candidate_is_prime else "составное, пропущено"
+                trace.append(f"Проверка кандидата {candidate}: {verdict}.")
+            if candidate_is_prime:
                 triplet.append(candidate)
             candidate += 2
 
         group_product = triplet[0] * triplet[1] * triplet[2]
+        if trace is not None:
+            trace.append(
+                f"Сформирована тройка {tuple(triplet)}; произведение q = {group_product}."
+            )
         while True:
-            common_divisor = gcd(remaining, group_product)
+            before = remaining
+            common_divisor = gcd(before, group_product)
             gcd_checks += 1
+            if trace is not None:
+                trace.append(f"НОД({before}, {group_product}) = {common_divisor}.")
             if common_divisor == 1:
+                if trace is not None:
+                    trace.append("Общих делителей в этой тройке больше нет; переходим к следующей.")
                 break
 
             remaining //= common_divisor
+            found_factors: list[int] = []
             for prime in triplet:
                 if common_divisor % prime == 0:
                     factors.append(prime)
+                    found_factors.append(prime)
                     common_divisor //= prime
             if common_divisor != 1:
                 raise ArithmeticError("НОД содержит делитель вне проверяемой тройки простых чисел.")
+            if trace is not None:
+                trace.append(
+                    f"Делим {before} на найденный НОД: получаем {remaining}; "
+                    f"добавлены множители {found_factors}."
+                )
 
             if remaining > 1 and is_prime(remaining):
                 factors.append(remaining)
+                if trace is not None:
+                    trace.append(f"Остаток {remaining} простое; факторизация завершена.")
                 return sorted(factors), gcd_checks
 
+    if trace is not None:
+        trace.append("Факторизация завершена; все простые множители найдены.")
     return sorted(factors), gcd_checks
 
 
@@ -155,7 +193,8 @@ def attack_rsa(e: int, n: int, ciphertext: int, variant: int | None = None) -> A
     if not 0 <= ciphertext < n:
         raise ValueError("Шифротекст C должен удовлетворять условию 0 ≤ C < n.")
 
-    p, q, gcd_checks = factor_modulus(n)
+    factorization_trace: list[str] = []
+    p, q, gcd_checks = factor_modulus(n, factorization_trace)
     phi = (p - 1) * (q - 1)
     if e >= phi:
         raise ValueError(f"Открытый показатель e должен быть меньше φ(n)={phi}.")
@@ -164,7 +203,19 @@ def attack_rsa(e: int, n: int, ciphertext: int, variant: int | None = None) -> A
     if modular_power(plaintext, e, n) != ciphertext:
         raise ValueError("Проверка шифрования не пройдена: проверьте исходные данные.")
 
-    return AttackResult(variant, e, n, ciphertext, p, q, phi, d, plaintext, gcd_checks)
+    return AttackResult(
+        variant,
+        e,
+        n,
+        ciphertext,
+        p,
+        q,
+        phi,
+        d,
+        plaintext,
+        gcd_checks,
+        tuple(factorization_trace),
+    )
 
 
 def attack_variant(variant: Variant) -> AttackResult:

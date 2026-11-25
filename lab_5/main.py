@@ -44,9 +44,9 @@ def read_variant(prompt: str, default: int | None = None) -> int | None:
     return number
 
 
-def format_result(result: AttackResult) -> str:
+def format_result(result: AttackResult, include_factorization_trace: bool = True) -> str:
     variant_label = f"Вариант: {result.variant}\n" if result.variant is not None else ""
-    return (
+    summary = (
         "Лабораторная работа № 5 — криптоанализ RSA факторизацией модуля\n"
         f"{variant_label}"
         f"Открытый ключ (e, n): ({result.e}, {result.n})\n"
@@ -57,6 +57,10 @@ def format_result(result: AttackResult) -> str:
         f"Открытый текст: M={result.plaintext}\n"
         f"Проверка: M^e mod n = {result.ciphertext}\n"
     )
+    if not include_factorization_trace:
+        return summary
+    steps = "\n".join(f"{index}. {line}" for index, line in enumerate(result.factorization_trace, 1))
+    return f"{summary}\nПротокол перебора троек простых чисел:\n{steps}\n"
 
 
 def save_result(result: AttackResult) -> Path:
@@ -67,13 +71,35 @@ def save_result(result: AttackResult) -> Path:
     return path
 
 
+def save_factorization_trace(
+    n: int, factors: list[int], gcd_checks: int, trace: list[str]
+) -> Path:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    factorization = " · ".join(
+        f"{prime}^{factors.count(prime)}" if factors.count(prime) > 1 else str(prime)
+        for prime in sorted(set(factors))
+    )
+    path = OUTPUT_DIR / f"factorization_{n}_steps.txt"
+    content = (
+        "Групповая факторизация методом пробного деления\n"
+        f"Число: n = {n}\n"
+        f"Разложение: {n} = {factorization}\n"
+        f"Вычислений НОД: {gcd_checks}\n\n"
+        "Протокол перебора:\n"
+        + "\n".join(f"{index}. {line}" for index, line in enumerate(trace, 1))
+        + "\n"
+    )
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
 def run_variant(variant_number: int) -> None:
     try:
         result = attack_variant(VARIANTS[variant_number])
     except ValueError as error:
         print(f"Ошибка выполнения атаки: {error}")
         return
-    print("\n" + format_result(result), end="")
+    print("\n" + format_result(result, include_factorization_trace=False), end="")
     print(f"Результат сохранён: {save_result(result)}")
 
 
@@ -89,7 +115,7 @@ def run_custom_attack() -> None:
     except ValueError as error:
         print(f"Ошибка выполнения атаки: {error}")
         return
-    print("\n" + format_result(result), end="")
+    print("\n" + format_result(result, include_factorization_trace=False), end="")
     print(f"Результат сохранён: {save_result(result)}")
 
 
@@ -134,7 +160,8 @@ def math_check_menu() -> None:
                 n = read_integer("Введите модуль n")
                 if n is None:
                     continue
-                factors, gcd_checks = factor_by_prime_triplets(n)
+                trace: list[str] = []
+                factors, gcd_checks = factor_by_prime_triplets(n, trace)
                 if len(factors) == 1:
                     print(f"Число n={n} простое.")
                 else:
@@ -146,6 +173,7 @@ def math_check_menu() -> None:
                     ]
                     print(f"Факторизация: {n} = {' · '.join(powers)}.")
                 print(f"Вычислений НОД для групп простых чисел: {gcd_checks}.")
+                print(f"Протокол перебора сохранён: {save_factorization_trace(n, factors, gcd_checks, trace)}")
             else:
                 print("Выберите 1, 2, 3, 4 или 0.")
         except ValueError as error:

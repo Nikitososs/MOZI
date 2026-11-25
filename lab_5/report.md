@@ -53,7 +53,7 @@
 
 ## Работа приложения
 
-Запуск: `python -m lab_5.main`. Пункт 1 решает выбранный вариант из таблицы 1–30 (по умолчанию 16); пункт 2 принимает произвольные $e,n,C$; пункт 3 открывает математические проверки, включая расширенный алгоритм Евклида, обратный элемент, бинарное возведение в степень и факторизацию группами простых троек. При факторизации программа удаляет степени двойки, проверяет простоту и затем вычисляет НОД остатка с произведением очередной тройки простых чисел. После атаки выводятся найденные множители, число вычислений НОД, $\varphi(n)$, закрытый показатель, расшифрованный блок и результат повторного шифрования. Расчёт сохраняется в `lab_5/outputs/variant_<номер>_solution.txt`.
+Запуск: `python -m lab_5.main`. Пункт 1 решает выбранный вариант из таблицы 1–30 (по умолчанию 16); пункт 2 принимает произвольные $e,n,C$; пункт 3 открывает математические проверки, включая расширенный алгоритм Евклида, обратный элемент, бинарное возведение в степень и факторизацию группами простых троек. При факторизации программа удаляет степени двойки, проверяет простоту и затем вычисляет НОД остатка с произведением очередной тройки простых чисел. После атаки выводятся найденные множители, число вычислений НОД, $\varphi(n)$, закрытый показатель, расшифрованный блок и результат повторного шифрования. Файл `variant_<номер>_solution.txt` содержит полный протокол перебора кандидатов и троек; факторизация из проверки математики записывается отдельно в `factorization_<n>_steps.txt`. Оба файла находятся в `lab_5/outputs/`.
 
 # СПИСОК ЛИТЕРАТУРЫ
 
@@ -63,9 +63,9 @@
 
 ## Приложение А. Фрагмент исходного кода `rsa_attack.py`
 
-Проверка простоты, факторизация произведениями троек простых чисел, восстановление закрытого показателя и проверка расшифрования.
+Проверка простоты, формирование троек простых чисел, вычисление НОД и запись подробных шагов в протокол атаки.
 
-Листинг: Факторизация RSA-модуля и выполнение атаки
+Листинг: Факторизация RSA-модуля с протоколированием шагов
 
 ```python
 from __future__ import annotations
@@ -88,16 +88,16 @@ class AttackResult:
     d: int
     plaintext: int
     factorization_checks: int
+    factorization_trace: tuple[str, ...]
 
-def factor_modulus(n: int) -> tuple[int, int, int]:
+def factor_modulus(n: int, trace: list[str] | None = None) -> tuple[int, int, int]:
     """Найти два различных простых множителя RSA-модуля и число проверок НОД."""
     if n < 4:
         raise ValueError("Модуль n должен быть не меньше 4.")
 
-    if is_prime(n):
+    factors, gcd_checks = factor_by_prime_triplets(n, trace)
+    if len(factors) == 1:
         raise ValueError(f"Не удалось факторизовать n={n}: число простое.")
-
-    factors, gcd_checks = factor_by_prime_triplets(n)
     if len(factors) != 2:
         raise ValueError("n должно раскладываться на два простых множителя.")
     factor, quotient = factors
@@ -105,7 +105,9 @@ def factor_modulus(n: int) -> tuple[int, int, int]:
         raise ValueError("Множители RSA-модуля должны быть различными простыми числами.")
     return factor, quotient, gcd_checks
 
-def factor_by_prime_triplets(n: int) -> tuple[list[int], int]:
+def factor_by_prime_triplets(
+    n: int, trace: list[str] | None = None
+) -> tuple[list[int], int]:
     """Разложить n по тройкам простых чисел с помощью gcd.
 
     Степени двойки сначала выделяются двоичным сдвигом. Для нечётного
@@ -117,46 +119,82 @@ def factor_by_prime_triplets(n: int) -> tuple[list[int], int]:
     if n < 2:
         raise ValueError("Для факторизации требуется n ≥ 2.")
 
+    if trace is not None:
+        trace.append(f"Начальное число: n = {n}.")
     remaining = n
     factors: list[int] = []
     while remaining & 1 == 0:
         factors.append(2)
+        if trace is not None:
+            trace.append(f"Остаток чётный: выделен множитель 2; {remaining} >> 1.")
         remaining >>= 1
 
     gcd_checks = 0
+    if trace is not None:
+        trace.append(f"После выделения двоек остаток: {remaining}.")
     if remaining == 1:
+        if trace is not None:
+            trace.append("Остаток равен 1; факторизация завершена.")
         return factors, gcd_checks
     if is_prime(remaining):
         factors.append(remaining)
+        if trace is not None:
+            trace.append(f"Остаток {remaining} простое; добавлен последний множитель.")
         return factors, gcd_checks
+    if trace is not None:
+        trace.append(f"Остаток {remaining} составной; начинаем перебор троек простых.")
 
     candidate = 3
     while remaining > 1:
         triplet: list[int] = []
         while len(triplet) < 3:
-            if is_prime(candidate):
+            candidate_is_prime = is_prime(candidate)
+            if trace is not None:
+                verdict = "простое, добавлено в тройку" if candidate_is_prime else "составное, пропущено"
+                trace.append(f"Проверка кандидата {candidate}: {verdict}.")
+            if candidate_is_prime:
                 triplet.append(candidate)
             candidate += 2
 
         group_product = triplet[0] * triplet[1] * triplet[2]
+        if trace is not None:
+            trace.append(
+                f"Сформирована тройка {tuple(triplet)}; произведение q = {group_product}."
+            )
         while True:
-            common_divisor = gcd(remaining, group_product)
+            before = remaining
+            common_divisor = gcd(before, group_product)
             gcd_checks += 1
+            if trace is not None:
+                trace.append(f"НОД({before}, {group_product}) = {common_divisor}.")
             if common_divisor == 1:
+                if trace is not None:
+                    trace.append("Общих делителей в этой тройке больше нет; переходим к следующей.")
                 break
 
             remaining //= common_divisor
+            found_factors: list[int] = []
             for prime in triplet:
                 if common_divisor % prime == 0:
                     factors.append(prime)
+                    found_factors.append(prime)
                     common_divisor //= prime
             if common_divisor != 1:
                 raise ArithmeticError("НОД содержит делитель вне проверяемой тройки простых чисел.")
+            if trace is not None:
+                trace.append(
+                    f"Делим {before} на найденный НОД: получаем {remaining}; "
+                    f"добавлены множители {found_factors}."
+                )
 
             if remaining > 1 and is_prime(remaining):
                 factors.append(remaining)
+                if trace is not None:
+                    trace.append(f"Остаток {remaining} простое; факторизация завершена.")
                 return sorted(factors), gcd_checks
 
+    if trace is not None:
+        trace.append("Факторизация завершена; все простые множители найдены.")
     return sorted(factors), gcd_checks
 
 def is_prime(number: int) -> bool:
@@ -216,7 +254,8 @@ def attack_rsa(e: int, n: int, ciphertext: int, variant: int | None = None) -> A
     if not 0 <= ciphertext < n:
         raise ValueError("Шифротекст C должен удовлетворять условию 0 ≤ C < n.")
 
-    p, q, gcd_checks = factor_modulus(n)
+    factorization_trace: list[str] = []
+    p, q, gcd_checks = factor_modulus(n, factorization_trace)
     phi = (p - 1) * (q - 1)
     if e >= phi:
         raise ValueError(f"Открытый показатель e должен быть меньше φ(n)={phi}.")
@@ -225,5 +264,76 @@ def attack_rsa(e: int, n: int, ciphertext: int, variant: int | None = None) -> A
     if modular_power(plaintext, e, n) != ciphertext:
         raise ValueError("Проверка шифрования не пройдена: проверьте исходные данные.")
 
-    return AttackResult(variant, e, n, ciphertext, p, q, phi, d, plaintext, gcd_checks)
+    return AttackResult(
+        variant,
+        e,
+        n,
+        ciphertext,
+        p,
+        q,
+        phi,
+        d,
+        plaintext,
+        gcd_checks,
+        tuple(factorization_trace),
+    )
+```
+
+## Приложение Б. Фрагмент исходного кода `main.py`
+
+Формирование текста результата и сохранение протокола перебора в выходные файлы.
+
+Листинг: Запись результатов и протокола факторизации
+
+```python
+from pathlib import Path
+
+from lab_5.rsa_attack import AttackResult
+
+
+def format_result(result: AttackResult, include_factorization_trace: bool = True) -> str:
+    variant_label = f"Вариант: {result.variant}\n" if result.variant is not None else ""
+    summary = (
+        "Лабораторная работа № 5 — криптоанализ RSA факторизацией модуля\n"
+        f"{variant_label}"
+        f"Открытый ключ (e, n): ({result.e}, {result.n})\n"
+        f"Факторизация n: p={result.p}, q={result.q}; проверок НОД групп: {result.factorization_checks}\n"
+        f"φ(n) = (p−1)(q−1) = {result.phi}\n"
+        f"Закрытый показатель: d={result.d}\n"
+        f"Шифротекст: C={result.ciphertext}\n"
+        f"Открытый текст: M={result.plaintext}\n"
+        f"Проверка: M^e mod n = {result.ciphertext}\n"
+    )
+    if not include_factorization_trace:
+        return summary
+    steps = "\n".join(f"{index}. {line}" for index, line in enumerate(result.factorization_trace, 1))
+    return f"{summary}\nПротокол перебора троек простых чисел:\n{steps}\n"
+
+def save_result(result: AttackResult) -> Path:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    variant_number = result.variant if result.variant is not None else "custom"
+    path = OUTPUT_DIR / f"variant_{variant_number}_solution.txt"
+    path.write_text(format_result(result), encoding="utf-8")
+    return path
+
+def save_factorization_trace(
+    n: int, factors: list[int], gcd_checks: int, trace: list[str]
+) -> Path:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    factorization = " · ".join(
+        f"{prime}^{factors.count(prime)}" if factors.count(prime) > 1 else str(prime)
+        for prime in sorted(set(factors))
+    )
+    path = OUTPUT_DIR / f"factorization_{n}_steps.txt"
+    content = (
+        "Групповая факторизация методом пробного деления\n"
+        f"Число: n = {n}\n"
+        f"Разложение: {n} = {factorization}\n"
+        f"Вычислений НОД: {gcd_checks}\n\n"
+        "Протокол перебора:\n"
+        + "\n".join(f"{index}. {line}" for index, line in enumerate(trace, 1))
+        + "\n"
+    )
+    path.write_text(content, encoding="utf-8")
+    return path
 ```
