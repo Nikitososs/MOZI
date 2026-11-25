@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import gcd, isqrt
+from math import gcd, isqrt, prod
 
 from lab_5.variants import Variant
 
@@ -71,7 +71,10 @@ def factor_by_prime_triplets(
         if trace is not None:
             trace.append("Остаток равен 1; факторизация завершена.")
         return factors, gcd_checks
-    if is_prime(remaining):
+    limit = isqrt(remaining)
+    sieve_primes = primes_up_to(limit)
+    sieve_prime_set = set(sieve_primes)
+    if _is_prime_from_sieve_primes(remaining, sieve_primes):
         factors.append(remaining)
         if trace is not None:
             trace.append(f"Остаток {remaining} простое; добавлен последний множитель.")
@@ -80,10 +83,10 @@ def factor_by_prime_triplets(
         trace.append(f"Остаток {remaining} составной; начинаем перебор троек простых.")
 
     candidate = 3
-    while remaining > 1:
+    while remaining > 1 and candidate <= limit:
         triplet: list[int] = []
-        while len(triplet) < 3:
-            candidate_is_prime = is_prime(candidate)
+        while len(triplet) < 3 and candidate <= limit:
+            candidate_is_prime = candidate in sieve_prime_set
             if trace is not None:
                 verdict = "простое, добавлено в тройку" if candidate_is_prime else "составное, пропущено"
                 trace.append(f"Проверка кандидата {candidate}: {verdict}.")
@@ -91,7 +94,9 @@ def factor_by_prime_triplets(
                 triplet.append(candidate)
             candidate += 2
 
-        group_product = triplet[0] * triplet[1] * triplet[2]
+        if not triplet:
+            break
+        group_product = prod(triplet)
         if trace is not None:
             trace.append(
                 f"Сформирована тройка {tuple(triplet)}; произведение q = {group_product}."
@@ -122,23 +127,45 @@ def factor_by_prime_triplets(
                     f"добавлены множители {found_factors}."
                 )
 
-            if remaining > 1 and is_prime(remaining):
+            if remaining > 1 and _is_prime_from_sieve_primes(remaining, sieve_primes):
                 factors.append(remaining)
                 if trace is not None:
                     trace.append(f"Остаток {remaining} простое; факторизация завершена.")
                 return sorted(factors), gcd_checks
 
+        if remaining > 1 and _is_prime_from_sieve_primes(remaining, sieve_primes):
+            factors.append(remaining)
+            if trace is not None:
+                trace.append(f"Остаток {remaining} простое; факторизация завершена.")
+            return sorted(factors), gcd_checks
+
+    if remaining > 1:
+        if _is_prime_from_sieve_primes(remaining, sieve_primes):
+            factors.append(remaining)
+        else:
+            raise ArithmeticError("Не удалось выделить составной остаток проверенными простыми числами.")
     if trace is not None:
         trace.append("Факторизация завершена; все простые множители найдены.")
     return sorted(factors), gcd_checks
 
 
 def is_prime(number: int) -> bool:
-    """Проверить простоту чисел построенным до number решетом Эратосфена."""
+    """Проверить простоту делением на простые числа из решета до sqrt(number)."""
     if number < 2:
         return False
-    primes = primes_up_to(number)
-    return primes[-1] == number
+    return _is_prime_from_sieve_primes(number, primes_up_to(isqrt(number)))
+
+
+def _is_prime_from_sieve_primes(number: int, primes: list[int]) -> bool:
+    """Проверить число делителями из готового списка простых до его корня."""
+    if number < 2:
+        return False
+    for prime in primes:
+        if prime * prime > number:
+            break
+        if number % prime == 0:
+            return number == prime
+    return True
 
 
 def primes_up_to(limit: int) -> list[int]:

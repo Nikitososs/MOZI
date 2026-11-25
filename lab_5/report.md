@@ -46,7 +46,7 @@
 
 Проверка обратного показателя: $251\cdot38195=9586945=171\cdot56064+1$, поэтому $ed\bmod\varphi(n)=1$. Повторное шифрование подтверждает результат: $2316^{251}\bmod56549=20844=C$.
 
-Для учебного варианта результат расшифрования — числовой блок $M=2316$. В проверочном примере методички $84\,257\,901$ разложено по группам $q_1=105$, $q_2=2431$, $q_3=12673$: НОД с $q_1$ даёт $21,21,3,3$, затем с $q_2$ — $13$, с $q_3$ — $23$; остаток $71$ прост. Получено $84\,257\,901=3^4\cdot7^2\cdot13\cdot23\cdot71$. Алгоритм предварительно выделяет степени двойки, а НОД с произведением тройки повторяется для текущего остатка до результата 1. Простота кандидатов проверяется решетом Эратосфена: числа до кандидата помечаются простыми, затем составные кратные вычёркиваются; кандидат прост, если остаётся отмеченным. Реализация находится в `lab_5/rsa_attack.py`; исходные варианты — в `lab_5/variants.py`.
+Для учебного варианта результат расшифрования — числовой блок $M=2316$. Дополнительная проверка по примеру методички: $84\,257\,901=3^4\cdot7^2\cdot13\cdot23\cdot71$; НОД с $q_1=105$ даёт $21,21,3,3$, с $q_2=2431$ — $13$, с $q_3=12673$ — $23$, после чего остаток $71$ прост. Решето строится один раз до $\sqrt n$ и повторно используется при сборке троек и проверке остатка. В решете кратные простого $p$ отмечаются начиная с $p^2$, так как меньшие кратные уже обработаны.
 
 
 ---
@@ -71,7 +71,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import gcd, isqrt
+from math import gcd, isqrt, prod
 
 from lab_5.variants import Variant
 
@@ -137,7 +137,10 @@ def factor_by_prime_triplets(
         if trace is not None:
             trace.append("Остаток равен 1; факторизация завершена.")
         return factors, gcd_checks
-    if is_prime(remaining):
+    limit = isqrt(remaining)
+    sieve_primes = primes_up_to(limit)
+    sieve_prime_set = set(sieve_primes)
+    if _is_prime_from_sieve_primes(remaining, sieve_primes):
         factors.append(remaining)
         if trace is not None:
             trace.append(f"Остаток {remaining} простое; добавлен последний множитель.")
@@ -146,10 +149,10 @@ def factor_by_prime_triplets(
         trace.append(f"Остаток {remaining} составной; начинаем перебор троек простых.")
 
     candidate = 3
-    while remaining > 1:
+    while remaining > 1 and candidate <= limit:
         triplet: list[int] = []
-        while len(triplet) < 3:
-            candidate_is_prime = is_prime(candidate)
+        while len(triplet) < 3 and candidate <= limit:
+            candidate_is_prime = candidate in sieve_prime_set
             if trace is not None:
                 verdict = "простое, добавлено в тройку" if candidate_is_prime else "составное, пропущено"
                 trace.append(f"Проверка кандидата {candidate}: {verdict}.")
@@ -157,7 +160,9 @@ def factor_by_prime_triplets(
                 triplet.append(candidate)
             candidate += 2
 
-        group_product = triplet[0] * triplet[1] * triplet[2]
+        if not triplet:
+            break
+        group_product = prod(triplet)
         if trace is not None:
             trace.append(
                 f"Сформирована тройка {tuple(triplet)}; произведение q = {group_product}."
@@ -188,22 +193,43 @@ def factor_by_prime_triplets(
                     f"добавлены множители {found_factors}."
                 )
 
-            if remaining > 1 and is_prime(remaining):
+            if remaining > 1 and _is_prime_from_sieve_primes(remaining, sieve_primes):
                 factors.append(remaining)
                 if trace is not None:
                     trace.append(f"Остаток {remaining} простое; факторизация завершена.")
                 return sorted(factors), gcd_checks
 
+        if remaining > 1 and _is_prime_from_sieve_primes(remaining, sieve_primes):
+            factors.append(remaining)
+            if trace is not None:
+                trace.append(f"Остаток {remaining} простое; факторизация завершена.")
+            return sorted(factors), gcd_checks
+
+    if remaining > 1:
+        if _is_prime_from_sieve_primes(remaining, sieve_primes):
+            factors.append(remaining)
+        else:
+            raise ArithmeticError("Не удалось выделить составной остаток проверенными простыми числами.")
     if trace is not None:
         trace.append("Факторизация завершена; все простые множители найдены.")
     return sorted(factors), gcd_checks
 
 def is_prime(number: int) -> bool:
-    """Проверить простоту чисел построенным до number решетом Эратосфена."""
+    """Проверить простоту делением на простые числа из решета до sqrt(number)."""
     if number < 2:
         return False
-    primes = primes_up_to(number)
-    return primes[-1] == number
+    return _is_prime_from_sieve_primes(number, primes_up_to(isqrt(number)))
+
+def _is_prime_from_sieve_primes(number: int, primes: list[int]) -> bool:
+    """Проверить число делителями из готового списка простых до его корня."""
+    if number < 2:
+        return False
+    for prime in primes:
+        if prime * prime > number:
+            break
+        if number % prime == 0:
+            return number == prime
+    return True
 
 def primes_up_to(limit: int) -> list[int]:
     """Вернуть все простые числа до limit решетом Эратосфена."""
