@@ -173,13 +173,15 @@ def primes_up_to(limit: int) -> list[int]:
     if limit < 2:
         return []
 
-    sieve = bytearray(b"\x01") * (limit + 1)
-    sieve[0:2] = b"\x00\x00"
+    sieve = [True] * (limit + 1)
+    sieve[0] = False
+    if limit >= 1:
+        sieve[1] = False
     for candidate in range(2, isqrt(limit) + 1):
         if sieve[candidate]:
             first_composite = candidate * candidate
-            count = (limit - first_composite) // candidate + 1
-            sieve[first_composite : limit + 1 : candidate] = b"\x00" * count
+            for multiple in range(first_composite, limit + 1, candidate):
+                sieve[multiple] = False
     return [number for number, is_prime_candidate in enumerate(sieve) if is_prime_candidate]
 
 
