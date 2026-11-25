@@ -46,7 +46,8 @@ def factor_by_prime_triplets(
 
     Степени двойки сначала выделяются двоичным сдвигом. Для нечётного
     остатка последовательно строятся группы (3, 5, 7), (11, 13, 17), ...;
-    НОД остатка с произведением группы находит содержащиеся в ней делители;
+    Кандидаты отбираются решетом Эратосфена. НОД остатка с произведением
+    группы находит содержащиеся в ней делители;
     деление повторяется с той же группой до получения НОД, равного 1.
     Возвращаются простые множители с кратностями и число вычислений НОД.
     """
@@ -133,14 +134,26 @@ def factor_by_prime_triplets(
 
 
 def is_prime(number: int) -> bool:
-    """Проверить простоту пробным делением до квадратного корня."""
+    """Проверить простоту чисел построенным до number решетом Эратосфена."""
     if number < 2:
         return False
-    if number == 2:
-        return True
-    if number % 2 == 0:
-        return False
-    return all(number % divisor for divisor in range(3, isqrt(number) + 1, 2))
+    primes = primes_up_to(number)
+    return primes[-1] == number
+
+
+def primes_up_to(limit: int) -> list[int]:
+    """Вернуть все простые числа до limit решетом Эратосфена."""
+    if limit < 2:
+        return []
+
+    sieve = bytearray(b"\x01") * (limit + 1)
+    sieve[0:2] = b"\x00\x00"
+    for candidate in range(2, isqrt(limit) + 1):
+        if sieve[candidate]:
+            first_composite = candidate * candidate
+            count = (limit - first_composite) // candidate + 1
+            sieve[first_composite : limit + 1 : candidate] = b"\x00" * count
+    return [number for number, is_prime_candidate in enumerate(sieve) if is_prime_candidate]
 
 
 def extended_gcd(a: int, b: int) -> tuple[int, int, int]:

@@ -8,8 +8,10 @@ from lab_5.rsa_attack import (
     extended_gcd,
     factor_by_prime_triplets,
     factor_modulus,
+    is_prime,
     modular_inverse,
     modular_power,
+    primes_up_to,
 )
 from lab_5.variants import VARIANTS
 
@@ -31,6 +33,15 @@ def test_prime_triplet_factorization_extracts_powers_of_two_first():
     factors, gcd_checks = factor_by_prime_triplets(2**5 * 3 * 11)
     assert factors == [2, 2, 2, 2, 2, 3, 11]
     assert gcd_checks > 0
+
+
+def test_sieve_of_eratosthenes_generates_primes_and_primality_checks():
+    assert primes_up_to(20) == [2, 3, 5, 7, 11, 13, 17, 19]
+    assert primes_up_to(1) == []
+    assert is_prime(2)
+    assert is_prime(97)
+    assert not is_prime(1)
+    assert not is_prime(91)
 
 
 def test_prime_triplet_factorization_rejects_prime_modulus():
